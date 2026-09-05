@@ -1,0 +1,22 @@
+node_modules/
+dist/
+*.zip
+.vite/
+scripts/smoke-out/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# logs
+npm-debug.log*
+*.log
+
+# env / local overrides (none expected in this project, but never commit if added)
+.env
+.env.local
+*.local

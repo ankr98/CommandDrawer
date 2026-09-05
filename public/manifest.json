@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Command Drawer",
+  "version": "0.1.0",
+  "description": "Context-aware command snippets for people who administer things. Plaintext, synced with your browser profile, deliberately not a secret store.",
+  "minimum_chrome_version": "116",
+  "permissions": ["storage", "activeTab"],
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_title": "Command Drawer",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "options_ui": {
+    "page": "src/options/index.html",
+    "open_in_tab": true
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
+      },
+      "description": "Open Command Drawer"
+    }
+  }
+}
