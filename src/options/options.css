@@ -1,0 +1,67 @@
+body { font-size: 14px; }
+.options { max-width: 1040px; margin: 0 auto; padding: 20px 24px 40px; }
+.topbar { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+.topbar h1 { font-size: 18px; margin: 0; }
+.topbar .tagline { color: var(--text-muted); }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; color: var(--text-muted); }
+.tabs button.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; }
+.card h2 { font-size: 15px; margin: 0 0 10px; }
+.card h3 { font-size: 13px; margin: 14px 0 6px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.two-col { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
+@media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+
+/* Tree */
+.tree { display: flex; flex-direction: column; gap: 1px; }
+.tree-row {
+  display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 6px; cursor: pointer;
+  border: 1px solid transparent; position: relative;
+}
+.tree-row:hover { background: var(--row-hover); }
+.tree-row.selected { background: var(--row-active); }
+.tree-row.child { margin-left: 22px; }
+.tree-row .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-row .count { color: var(--text-muted); font-size: 12px; }
+.tree-row .grip { color: var(--text-muted); cursor: grab; }
+.tree-row.drop-before::before, .tree-row.drop-after::after {
+  content: ''; position: absolute; left: 6px; right: 6px; height: 2px; background: var(--accent);
+}
+.tree-row.drop-before::before { top: -1px; }
+.tree-row.drop-after::after { bottom: -1px; }
+.tree-row.drop-into { border-color: var(--accent); background: var(--row-hover); }
+.tree-row.drop-forbidden { border-color: var(--danger); }
+.tree-row.dragging { opacity: 0.4; }
+.tree-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+
+/* Pattern editor */
+.pattern-list { display: flex; flex-direction: column; gap: 6px; }
+.pattern-row { display: flex; align-items: center; gap: 8px; }
+.pattern-row .input { font-family: var(--mono); font-size: 12.5px; }
+.pattern-row .status { width: 90px; font-size: 12px; text-align: right; white-space: nowrap; }
+.pattern-row .status.ok { color: var(--ok); }
+.pattern-row .status.bad { color: var(--danger); }
+.pattern-row .status.muted { color: var(--text-muted); }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.test-url { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.test-url .input { font-family: var(--mono); font-size: 12.5px; }
+
+/* Snippets in options */
+.snip-list { display: flex; flex-direction: column; gap: 4px; }
+.snip-row { display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); }
+.snip-row .main { flex: 1; min-width: 0; }
+.snip-row .label { font-weight: 600; }
+.snip-row .value { font-family: var(--mono); font-size: 12px; white-space: pre-wrap; word-break: break-all; color: var(--text); max-height: 84px; overflow: hidden; }
+.snip-row .meta { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+.snip-row .actions { display: flex; gap: 4px; }
+
+/* Settings */
+.setting { display: grid; grid-template-columns: 220px 1fr; gap: 12px; align-items: start; padding: 10px 0; border-top: 1px solid var(--border); }
+.setting:first-of-type { border-top: 0; }
+.setting .k { font-weight: 600; }
+.setting .k small { display: block; color: var(--text-muted); font-weight: normal; margin-top: 2px; }
+.meter { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; margin: 6px 0; }
+.meter > div { height: 100%; background: var(--accent); }
+.meter.warn > div { background: var(--danger); }
+.kbd { font-family: var(--mono); font-size: 12px; border: 1px solid var(--border); border-radius: 3px; padding: 0 4px; background: var(--surface-2); }
+.status-line { margin-top: 8px; }
