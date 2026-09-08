@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import type { LoadedState, SnippetStore } from '../lib/storage';
 import { exportToJson, importFromJson, type ImportMode } from '../lib/transfer';
+import { IconDownload, IconUpload } from '../shared/icons';
 
 export function TransferTab({ store, state, notify }: { store: SnippetStore; state: LoadedState; notify: (m: string, k?: 'ok' | 'warn') => void }) {
   const [mode, setMode] = useState<ImportMode>('merge');
@@ -46,24 +47,28 @@ export function TransferTab({ store, state, notify }: { store: SnippetStore; sta
   return (
     <>
       <div class="card">
-        <h2>Export</h2>
+        <h2>
+          <IconDownload size={16} /> Export
+        </h2>
         <p class="hint" style={{ marginTop: 0 }}>
-          Downloads a JSON file with every folder, sub-folder, URL pattern and snippet. This is your backup, and how you hand a set of commands to a colleague. Values are plaintext in the file, exactly as they are in the extension.
+          Downloads all folders, patterns and snippets as one JSON file. Your backup, and the way to share snippets with a colleague. Values are plain text.
         </p>
         <button class="btn btn-primary" onClick={doExport} disabled={!state.folders.length}>
-          Export {state.folders.length} folder{state.folders.length === 1 ? '' : 's'} as JSON
+          <IconDownload size={14} /> Export {state.folders.length} folder{state.folders.length === 1 ? '' : 's'}
         </button>
       </div>
       <div class="card">
-        <h2>Import</h2>
+        <h2>
+          <IconUpload size={16} /> Import
+        </h2>
         <div class="setting">
           <div class="k">Mode</div>
-          <div>
-            <label style={{ display: 'block' }}>
-              <input type="radio" name="mode" checked={mode === 'merge'} onChange={() => setMode('merge')} /> Merge — add the file's folders alongside the existing ones
+          <div class="radio-group">
+            <label>
+              <input type="radio" name="mode" checked={mode === 'merge'} onChange={() => setMode('merge')} /> Merge — add to what you have
             </label>
-            <label style={{ display: 'block' }}>
-              <input type="radio" name="mode" checked={mode === 'replace'} onChange={() => setMode('replace')} /> Replace — delete everything first, then import
+            <label>
+              <input type="radio" name="mode" checked={mode === 'replace'} onChange={() => setMode('replace')} /> Replace — delete everything first
             </label>
           </div>
         </div>
@@ -73,12 +78,12 @@ export function TransferTab({ store, state, notify }: { store: SnippetStore; sta
         </div>
         {confirmReplace && pending ? (
           <div class="notice notice-danger">
-            This will delete your current {state.folders.length} folder{state.folders.length === 1 ? '' : 's'} before importing. Continue?
-            <div style={{ marginTop: 6, display: 'flex', gap: 6 }}>
-              <button class="btn btn-sm" onClick={() => (setConfirmReplace(false), setPending(null))}>
+            This deletes your current {state.folders.length} folder{state.folders.length === 1 ? '' : 's'} before importing. Continue?
+            <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+              <button class="btn" onClick={() => (setConfirmReplace(false), setPending(null))}>
                 Cancel
               </button>
-              <button class="btn btn-sm btn-danger" onClick={() => applyImport(pending)}>
+              <button class="btn btn-danger" onClick={() => applyImport(pending)}>
                 Replace everything
               </button>
             </div>

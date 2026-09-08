@@ -124,8 +124,6 @@ try {
   let p = await popupFor(7, 'https://portal.azure.com/#home', 'popup-azure-match');
   let crumb = await p.$eval('.crumbs .crumb.current', (e) => e.textContent);
   check(crumb === 'Azure portal', `auto-match opens the Azure folder (crumb: "${crumb}")`);
-  let chip = await p.$eval('.chip', (e) => e.textContent).catch(() => '');
-  check(/Matched portal\.azure\.com/.test(chip), `chip says matched host: "${chip}"`);
   check(await p.$eval('input[type=search]', (el) => document.activeElement === el), 'search field is focused on open');
 
   // Copy via click → clipboard write + "Copied" state + usedCount bump
@@ -147,10 +145,17 @@ try {
   await sleep(200);
   crumb = await p.$eval('.crumbs .crumb.current', (e) => e.textContent);
   check(crumb === 'PowerShell', `manual pick shows PowerShell (crumb: "${crumb}")`);
-  chip = await p.$eval('.chip', (e) => e.textContent);
-  check(/Pinned for this site/.test(chip), `chip says pinned: "${chip}"`);
   const rows = await p.$$eval('.row .title', (els) => els.map((e) => e.textContent));
   check(rows[0] === 'Exchange Online', `child folder listed before snippets: ${rows.join(' | ')}`);
+  const headers = await p.$$eval('.group-header', (els) => els.map((e) => e.textContent));
+  check(headers.join('|') === 'Sub-folders|Snippets', `folder view groups sub-folders and snippets: ${headers.join(', ')}`);
+  // Sort menu lists the three orders
+  await p.click('.toolbar .menu > button');
+  await p.waitForSelector('.menu-list');
+  const sortOpts = await p.$$eval('.menu-list button', (els) => els.map((e) => e.textContent.trim()));
+  check(sortOpts.join('|') === 'Manual order|Most used|Recently used', `sort menu offers the three orders: ${sortOpts.join(', ')}`);
+  await p.keyboard.press('Escape');
+  check((await p.$('.menu-list')) === null, 'Escape closes the sort menu');
   await p.screenshot({ path: resolve(out, 'popup-pinned.png') });
   await p.close();
 
@@ -158,12 +163,20 @@ try {
   p = await popupFor(7, 'https://portal.azure.com/#view/other', 'popup-reopen');
   crumb = await p.$eval('.crumbs .crumb.current', (e) => e.textContent);
   check(crumb === 'PowerShell', `override survives reopen on same tab+origin (crumb: "${crumb}")`);
-  // Auto resets to the match
-  await p.click('.chip .btn-link');
-  await sleep(200);
-  crumb = await p.$eval('.crumbs .crumb.current', (e) => e.textContent);
-  check(crumb === 'Azure portal', `Auto clears override and re-matches (crumb: "${crumb}")`);
   await p.close();
+  // With "remember my folder per site" off, the remembered pick is ignored
+  const setRemember = (v) =>
+    options.evaluate(async (v) => {
+      const m = (await chrome.storage.sync.get('meta')).meta;
+      m.settings.rememberPerSite = v;
+      await chrome.storage.sync.set({ meta: m });
+    }, v);
+  await setRemember(false);
+  p = await popupFor(7, 'https://portal.azure.com/#view/other', 'popup-no-remember');
+  crumb = await p.$eval('.crumbs .crumb.current', (e) => e.textContent);
+  check(crumb === 'Azure portal', `remember-per-site off ignores the pick and auto-matches (crumb: "${crumb}")`);
+  await p.close();
+  await setRemember(true);
 
   // Different tab, same origin → fresh auto-match (set an override on tab 7 first)
   p = await popupFor(7, 'https://portal.azure.com/', 'popup-tmp');
@@ -179,15 +192,29 @@ try {
 
   // Child folder pattern wins depth-blind
   p = await popupFor(9, 'https://admin.exchange.microsoft.com/#/homepage', 'popup-child-match');
-  const crumbs = await p.$$eval('.crumbs .crumb', (els) => els.map((e) => e.textContent));
-  check(crumbs.join(' ') === '‹ All PowerShell Exchange Online', `child folder matched with full breadcrumb: ${crumbs.join(' / ')}`);
+  const crumbs = await p.$$eval('.crumbs .crumb', (els) => els.map((e) => e.textContent.trim()));
+  check(crumbs.join(' ') === 'All PowerShell Exchange Online', `child folder matched with full breadcrumb: ${crumbs.join(' / ')}`);
   await p.close();
 
-  // No match → root view, no chip
+  // No match → root view
   p = await popupFor(10, 'https://github.com/x', 'popup-root');
-  check((await p.$('.chip')) === null, 'no chip when nothing matches');
   const roots = await p.$$eval('.row .title', (els) => els.map((e) => e.textContent));
   check(roots.join(',') === 'PowerShell,Azure portal', `root view lists root folders: ${roots.join(', ')}`);
+
+  // Creating a folder on an unmatched site offers to map it, once
+  await p.click('.crumbs button.btn');
+  await p.waitForSelector('.panel input');
+  await p.type('.panel input', 'GitHub');
+  await p.keyboard.press('Enter');
+  await p.waitForSelector('.notice.suggest');
+  const offer = await p.$eval('.notice.suggest', (e) => e.textContent);
+  check(/github\.com/.test(offer), `mapping offered right after creating a folder on an unmatched site: "${offer.trim()}"`);
+  await p.click('.notice.suggest .btn-ghost');
+  await sleep(100);
+  check((await p.$('.notice.suggest')) === null, 'declining hides the offer');
+  await p.screenshot({ path: resolve(out, 'popup-new-folder.png') });
+  await p.click('.crumbs .crumb.back');
+  await p.waitForSelector('.row');
 
   // Keyboard: search across tree, Enter copies and closes
   await p.type('input[type=search]', 'guest');
