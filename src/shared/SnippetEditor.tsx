@@ -4,7 +4,8 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { MAX_LABEL_CHARS, MAX_SNIPPET_CHARS, type Snippet } from '../lib/schema';
-import { detectSecret, SECRET_WARNING_TEXT } from '../lib/guards';
+import { detectSecret, secretWarning } from '../lib/guards';
+import { IconAlert } from './icons';
 
 export interface SnippetEditorProps {
   initial?: Partial<Snippet>;
@@ -30,11 +31,11 @@ export function SnippetEditor({ initial, warnOnSecrets, onSave, onCancel, onDele
       return;
     }
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setHit(detectSecret(value)), 150);
+    timer.current = setTimeout(() => setHit(detectSecret(value, label)), 150);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [value, warnOnSecrets]);
+  }, [value, label, warnOnSecrets]);
 
   useEffect(() => {
     if (autoFocusValue) valueRef.current?.focus();
@@ -91,8 +92,18 @@ export function SnippetEditor({ initial, warnOnSecrets, onSave, onCancel, onDele
           placeholder="Command, query, id or URL — stored exactly as typed, in plaintext"
           onInput={(e) => setValue((e.target as HTMLTextAreaElement).value)}
         />
-        {hit ? <div class="warn-line">{SECRET_WARNING_TEXT}</div> : null}
-        {valueOver ? <div class="warn-line">Values are limited to {MAX_SNIPPET_CHARS} characters. Long blocks belong in a script file, not a snippet.</div> : null}
+        {hit ? (
+          <div class="warn-line" role="alert">
+            <IconAlert size={14} />
+            <span>{secretWarning(hit)}</span>
+          </div>
+        ) : null}
+        {valueOver ? (
+          <div class="warn-line">
+            <IconAlert size={14} />
+            <span>Values are limited to {MAX_SNIPPET_CHARS} characters. Long blocks belong in a script file, not a snippet.</span>
+          </div>
+        ) : null}
       </label>
       <div class="row-actions">
         {onDelete ? (

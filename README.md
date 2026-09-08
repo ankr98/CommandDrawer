@@ -18,9 +18,12 @@ automatically. One click copies. Nothing else.
   field, no notes, no masking, no "reveal". Values are always shown in plaintext and
   stored unencrypted. If you can't hide a value, you're far less likely to put a
   password in it. A strict, local, non-blocking warning flags known credential
-  formats (JWTs, GitHub/AWS/Slack/Google keys, private-key blocks, Azure storage
-  keys, connection-string passwords, Entra client secrets) — it is a nudge, not a
-  control, and it can be turned off.
+  formats (Entra client secrets and refresh tokens, JWTs, Azure Storage/SAS/service
+  keys, Azure DevOps PATs, GitHub/AWS/Google/Slack keys, private-key blocks,
+  passwords embedded in URLs and connection strings) and literal values sitting
+  right after a password/secret/key keyword (`password=…`, `-ClientSecret …`,
+  `ConvertTo-SecureString "…" -AsPlainText`). It is a nudge, not a control, and it
+  can be turned off.
 - **No backend.** No SaaS, no account, no telemetry. Sync rides on your browser
   profile sync (`chrome.storage.sync`), and JSON export/import is the backup and
   sharing story.
@@ -33,19 +36,25 @@ automatically. One click copies. Nothing else.
   snippets and URL patterns. Sub-folders do **not** inherit their parent's patterns.
 - Chrome match-pattern URL mapping per folder with specificity scoring:
   `https://admin.site.com/feature/*` beats `https://admin.site.com/*`, exact hosts
-  beat `*.` wildcards. Children compete with roots on equal terms. One-click presets
-  for Entra, Intune, Azure portal, Graph Explorer, Exchange admin, M365 admin,
-  Purview, Defender and GitHub.
-- Per-tab, per-site override memory: pick a folder manually and that tab remembers
-  it for that site across reloads, in-tab navigation and coming back later. New
-  tabs start clean. A chip shows *Pinned for this site — Auto* or *Matched host*.
+  beat `*.` wildcards. Children compete with roots on equal terms. A live tester
+  shows, per folder, whether a URL matches and which folder would win, and the
+  pattern editor lists other folders whose more specific patterns take precedence.
+- Per-tab, per-site memory (a setting, on by default): pick a folder manually and
+  that tab keeps showing it for that site across reloads and in-tab navigation. New
+  tabs start clean. Turn it off to always open the best match.
+- Right after you create a folder on a site that matches nothing yet, the drawer
+  offers to open that folder on this site from now on. *Map to host* also lives in
+  the folder menu.
 - Keyboard-first popup: search is focused on open, type to filter the whole tree,
   ↑/↓ to move, Enter to copy and close, Esc/Backspace to go up. Global shortcut
   `Ctrl+Shift+Y` (rebindable in the browser).
 - Inline "Copied" confirmation on the row; usage counts with manual / most used /
-  recently used sorting; "Show all in this folder" roll-up for parents.
+  recently used sorting, with a default order and a choice of whether a sort picked
+  in the drawer sticks or resets per folder; "Include sub-folder snippets" roll-up
+  for parents.
 - Options page with drag-and-drop tree management, a live pattern tester, quota
-  meter, sync notes, dark mode, and JSON import/export that preserves hierarchy.
+  meter, sync notes, dark mode, JSON import/export that preserves hierarchy, and
+  an About page.
 - Storage layer that chunks large folders under the 8 KB sync item cap, refuses
   new folders near the 512-item ceiling, debounces writes, and falls back to
   `storage.local` (with a visible "local only" badge) when sync is full — data is
@@ -82,7 +91,7 @@ src/
     storage.ts  sync/local abstraction: chunking, quota + item accounting, debounce
     tree.ts     parentId graph: depth enforcement, move, delete cascade/promote, orphan repair
     matcher.ts  match-pattern parsing, specificity scoring, precedence resolution
-    session.ts  tab+origin override map, LRU cap, discovery counters
+    session.ts  tab+origin override map, LRU cap, last-seen URL for the tester
     guards.ts   credential-format allowlist (data) + detection
     search.ts   fuzzy tree-wide search, sort modes
     transfer.ts JSON export/import with hierarchy
@@ -104,16 +113,35 @@ a popup lives there.
 
 ## Adding a credential pattern
 
-Patterns live in `src/lib/guards.ts` as data. A pattern ships only if it anchors on a
-fixed literal prefix or structural marker from a known issuer, produces zero hits
-against the fixture set in `tests/guards.test.ts`, and would read as obviously
-correct to the user every time it fires. When a pattern produces a false positive it
-is removed, not tuned. Add the offending legitimate string to the fixture set.
+Patterns live in `src/lib/guards.ts` as data, in two tiers:
+
+- **Format** patterns anchor on a fixed literal prefix or structural marker from a
+  known issuer (`ghp_`, `AKIA`, the `8Q~` marker inside Entra client secrets, the
+  `+ASt` signature inside Azure Storage keys). No entropy or length scoring, ever.
+- **Context** patterns need a password-ish keyword (`password=`, `-ClientSecret`,
+  `/pass:`) immediately followed by a *literal* value that carries a digit or a
+  password-style symbol. Variables (`$cred`, `%PW%`), placeholders (`<your-secret>`,
+  `{{ vault }}`, `***`), expressions (`(Read-Host)`) and cmdlet names never count.
+  A label that names a password over a value that is one bare password-shaped token
+  also counts.
+
+A pattern ships only if it produces zero hits against the fixture set in
+`tests/guards.test.ts` (100+ legitimate admin strings, many of which mention
+passwords) and would read as obviously correct to the user every time it fires.
+When a pattern produces a false positive it is removed, not tuned. Add the offending
+legitimate string to the fixture set.
 
 ## Roadmap (v2, not started)
 
 Placeholder tokens (`{{tenantId}}`), `chrome.storage.managed` policy folders pushed
 by an administrator, optional "add snippet from selection" context menu.
+
+## Support
+
+Command Drawer is free of charge and built in spare time, so no support is provided.
+If it saves you time and you would like to see more of it, you can
+[buy me a coffee](https://buymeacoffee.com/ankr98). The same note lives on the
+About page in the extension's settings.
 
 ## License
 

@@ -228,6 +228,10 @@ In order, on every popup open:
 
 ### 5.3 Override memory — the exact semantics
 
+> **Revision 4 (September 2026).** The *Pinned for this site — Auto* chip was removed from
+> the popup; the override logic below is unchanged but now sits behind a settings toggle
+> ("Remember my folder per site", default on). Off means every open resolves by auto-match.
+
 The requested behaviour is achievable within browser constraints. The mechanism:
 
 **Store:** `chrome.storage.session`. It is in-memory, never synced, cleared on browser
@@ -302,6 +306,12 @@ session store; the rest need a Playwright or manual pass.
 - Closing tab 7 and opening a new tab on `admin.site.com` auto-matches.
 
 ### 5.5 Discovery affordance
+
+> **Revision 4 (September 2026).** The three-picks counter proved opaque in use ("I didn't
+> catch when it was offered"). Replaced by a single, predictable offer: right after a folder
+> is created from the popup while the current site matches no folder, the popup asks
+> whether to open that folder on this site. Declining hides it; *Map to host* stays in the
+> folder menu. The session counters were removed.
 
 When the user is on a URL that matches no folder, and the folder they manually pick is used
 more than twice on that host, offer once: *"Map this folder to `intune.microsoft.com`?"*
@@ -411,6 +421,16 @@ in the README that this is a nudge rather than a control.
 - Keyword matching on the **label** field. "Prod admin password" is a real signal, but so
   are "reset user password" and "rotate app secret" — legitimate labels for legitimate
   command snippets. Fails criterion 3.
+
+> **Revision 4 (September 2026).** At the owner's request the exclusion on bare
+> `password=` was relaxed into a second, *context* tier: a password/secret/key/token
+> keyword immediately followed by a **literal** value that carries a digit or a
+> password-style symbol. Variables, placeholders, expressions and cmdlet names never
+> count, so `-Password $cred`, `password=<your-password>` and `New-MgUser
+> -PasswordProfile` stay quiet while `password=Hunter2!` and `-ClientSecret "…"`
+> fire. Label keywords are still never matched alone; combined with a value that is
+> one bare password-shaped token they now count. Entropy and length scoring remain
+> banned. The fixture set grew past 100 strings to defend this.
 
 **Test both directions.** The false-positive fixture set matters more than the
 true-positive one and is a required P3 artifact: a table of at least 30 legitimate admin
