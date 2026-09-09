@@ -68,8 +68,8 @@ try {
   await options.reload({ waitUntil: 'load' });
   await options.waitForSelector('.tree-row');
   const treeNames = await options.$$eval('.tree-row .name', (els) => els.map((e) => e.textContent));
-  check(JSON.stringify(treeNames) === JSON.stringify(['PowerShell', 'Exchange Online', 'Azure portal']), `options tree renders roots and child in order: ${treeNames.join(', ')}`);
-  await options.click('.tree-row:nth-child(2)');
+  check(JSON.stringify(treeNames) === JSON.stringify(['Azure portal', 'PowerShell', 'Exchange Online']), `options tree renders A-Z by default, child under its parent: ${treeNames.join(', ')}`);
+  await options.click('.tree-row:nth-child(3)'); // Exchange Online, under PowerShell
   await options.waitForSelector('.pattern-row');
   const heading = await options.$eval('.two-col > div:nth-child(2) .card h2', (e) => e.textContent);
   check(/Sub-folder of PowerShell/.test(heading), `folder editor shows parent: "${heading.trim()}"`);
@@ -87,7 +87,10 @@ try {
   await options.type('.snippet-editor textarea', 'ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij');
   await sleep(300);
   check((await options.$('.snippet-editor .warn-line')) !== null, 'credential-shaped value shows the inline warning');
-  check(await options.$eval('.snippet-editor button[type=submit]', (b) => !b.disabled), 'Save stays enabled despite the warning');
+  check(await options.$eval('.snippet-editor button[type=submit]', (b) => b.disabled), 'Save is disabled while the label is empty (labels are required)');
+  await options.type('.snippet-editor input.input', 'All mailboxes');
+  await sleep(200);
+  check(await options.$eval('.snippet-editor button[type=submit]', (b) => !b.disabled), 'Save stays enabled despite the warning once a label is given');
   await options.$eval('.snippet-editor textarea', (el) => { el.value = ''; });
   await options.type('.snippet-editor textarea', 'Get-Mailbox -ResultSize Unlimited');
   await sleep(300);
@@ -141,7 +144,7 @@ try {
   // Manual override: go to root, then PowerShell → pinned
   await p.click('.crumbs .crumb');
   await p.waitForSelector('.row');
-  await p.click('.row'); // PowerShell
+  await p.click('.row:nth-child(2)'); // PowerShell (A-Z: Azure portal, PowerShell)
   await sleep(200);
   crumb = await p.$eval('.crumbs .crumb.current', (e) => e.textContent);
   check(crumb === 'PowerShell', `manual pick shows PowerShell (crumb: "${crumb}")`);
@@ -182,7 +185,7 @@ try {
   p = await popupFor(7, 'https://portal.azure.com/', 'popup-tmp');
   await p.click('.crumbs .crumb');
   await p.waitForSelector('.row');
-  await p.click('.row');
+  await p.click('.row:nth-child(2)'); // PowerShell
   await sleep(200);
   await p.close();
   p = await popupFor(8, 'https://portal.azure.com/', 'popup-other-tab');
@@ -199,7 +202,7 @@ try {
   // No match → root view
   p = await popupFor(10, 'https://github.com/x', 'popup-root');
   const roots = await p.$$eval('.row .title', (els) => els.map((e) => e.textContent));
-  check(roots.join(',') === 'PowerShell,Azure portal', `root view lists root folders: ${roots.join(', ')}`);
+  check(roots.join(',') === 'Azure portal,PowerShell', `root view lists root folders A-Z: ${roots.join(', ')}`);
 
   // Creating a folder on an unmatched site offers to map it, once
   await p.click('.crumbs button.btn');
@@ -248,6 +251,41 @@ try {
   await sleep(500);
   const after = await worker.evaluate(async (id) => Object.keys(await chrome.storage.session.get(null)).filter((k) => k.startsWith(`override:${id}:`)).length, realId);
   check(after === 0, `tabs.onRemoved cleared it (${after} left)`);
+
+  // Right-click menu: the worker registers items from storage. Chrome has no API to
+  // list them, so probe by creating a duplicate: an existing id is refused.
+  const menuHas = (id) =>
+    worker.evaluate(
+      (id) =>
+        new Promise((res) => {
+          chrome.contextMenus.create({ id, title: 'probe', contexts: ['page'] }, () => {
+            const err = chrome.runtime.lastError?.message ?? '';
+            if (!err) chrome.contextMenus.remove(id, () => void chrome.runtime.lastError);
+            res(/duplicate/i.test(err));
+          });
+        }),
+      id,
+    );
+  const setMenuMode = (mode) =>
+    worker.evaluate(async (mode) => {
+      const m = (await chrome.storage.sync.get('meta')).meta;
+      m.settings.contextMenu = mode;
+      await chrome.storage.sync.set({ meta: m });
+    }, mode);
+  await sleep(500);
+  check(await menuHas('cd:root'), 'right-click menu: "Command Drawer" root is registered');
+  check(await menuHas('cd:m:exo:f:exo'), 'default mode: Exchange Online is a page-restricted top entry');
+  check(await menuHas('cd:all') && (await menuHas('cd:a:s:ps:s1')), 'default mode: "All folders" carries the whole tree');
+  check(!(await menuHas('cd:nope')), 'probe sanity: unknown id reads as absent');
+  await setMenuMode('all');
+  await sleep(900);
+  check((await menuHas('cd:a:f:ps')) && !(await menuHas('cd:all')), 'mode "all": tree sits directly under the root, no "All folders" entry');
+  await setMenuMode('off');
+  await sleep(900);
+  check(!(await menuHas('cd:root')), 'mode "off": menu removed');
+  await setMenuMode('matched');
+  await sleep(900);
+  check(await menuHas('cd:root'), 'back to default: menu rebuilt');
 
   check(consoleErrors.length === 0, `no page errors (${consoleErrors.length ? consoleErrors.join(' | ') : 'clean'})`);
 } finally {

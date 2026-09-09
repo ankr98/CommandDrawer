@@ -53,6 +53,7 @@ export function App() {
   const folders = state?.folders ?? [];
   const settings = state?.meta.settings;
   const remember = settings?.rememberPerSite ?? true;
+  const folderSort = settings?.folderSort ?? 'alpha';
   const origin = originOf(tab?.url);
 
   // Initial resolution: remembered pick (if enabled) → auto-match → root.
@@ -106,10 +107,10 @@ export function App() {
     if (q) {
       return searchSnippets(folders, q).map((h: SearchHit) => ({ kind: 'snippet', snippet: h.snippet, folder: h.folder, path: h.path, key: `s:${h.snippet.id}` }));
     }
-    if (!current) return rootFolders(folders).map((f) => ({ kind: 'folder', folder: f, key: `f:${f.id}` }));
-    const kids = childrenOf(folders, current.id);
+    if (!current) return rootFolders(folders, folderSort).map((f) => ({ kind: 'folder', folder: f, key: `f:${f.id}` }));
+    const kids = childrenOf(folders, current.id, folderSort);
     const roll = !!current.rollUpDescendants && kids.length > 0;
-    const groups = roll ? rollUp(folders, current.id).filter((g) => g.snippets.length) : [];
+    const groups = roll ? rollUp(folders, current.id, folderSort).filter((g) => g.snippets.length) : [];
     const hasSnippets = roll ? groups.length > 0 : current.snippets.length > 0;
     const out: Item[] = [];
     // Headers only when both kinds are present, so folders and snippets read as two groups.
@@ -125,7 +126,7 @@ export function App() {
       for (const s of sortSnippets(current.snippets, sortMode)) out.push({ kind: 'snippet', snippet: s, folder: current, key: `s:${s.id}` });
     }
     return out;
-  }, [folders, current, query, sortMode]);
+  }, [folders, current, query, sortMode, folderSort]);
 
   const selectable = useMemo(() => items.map((it, i) => (it.kind === 'header' ? -1 : i)).filter((i) => i >= 0), [items]);
 

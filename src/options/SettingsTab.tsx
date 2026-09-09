@@ -19,7 +19,17 @@ export function SettingsTab({ store, state, notify }: { store: SnippetStore; sta
 
         <div class="setting">
           <div class="k">
-            Default sort order<small>How snippets are ordered when a folder opens.</small>
+            Folder order<small>How folders are listed in the drawer, the options page and the right-click menu.</small>
+          </div>
+          <select class="input" style={{ width: 'auto' }} value={s.folderSort} onChange={(e) => set({ folderSort: (e.target as HTMLSelectElement).value as Settings['folderSort'] })}>
+            <option value="alpha">Alphabetical (A-Z)</option>
+            <option value="manual">Manual (drag to arrange)</option>
+          </select>
+        </div>
+
+        <div class="setting">
+          <div class="k">
+            Snippet order<small>How snippets are ordered when a folder opens.</small>
           </div>
           <select class="input" style={{ width: 'auto' }} value={s.sortMode} onChange={(e) => set({ sortMode: (e.target as HTMLSelectElement).value as Settings['sortMode'] })}>
             <option value="manual">Manual order</option>
@@ -49,6 +59,27 @@ export function SettingsTab({ store, state, notify }: { store: SnippetStore; sta
           <label class="check">
             <input type="checkbox" checked={s.rememberPerSite} onChange={(e) => set({ rememberPerSite: (e.target as HTMLInputElement).checked })} />
             Enabled
+          </label>
+        </div>
+
+        <div class="setting">
+          <div class="k">
+            Right-click menu<small>Adds "Command Drawer" to the page's right-click menu. Snippets are listed by label.</small>
+          </div>
+          <select class="input" style={{ width: 'auto' }} value={s.contextMenu} onChange={(e) => set({ contextMenu: (e.target as HTMLSelectElement).value as Settings['contextMenu'] })}>
+            <option value="matched">Folders matching the page first</option>
+            <option value="all">All folders, from the top</option>
+            <option value="off">Off</option>
+          </select>
+        </div>
+
+        <div class="setting">
+          <div class="k">
+            Right-click in a text field<small>Paste the snippet where you right-clicked, and copy it too. Off: copy only.</small>
+          </div>
+          <label class="check">
+            <input type="checkbox" checked={s.contextMenuInsert} disabled={s.contextMenu === 'off'} onChange={(e) => set({ contextMenuInsert: (e.target as HTMLInputElement).checked })} />
+            Paste into the field
           </label>
         </div>
 
