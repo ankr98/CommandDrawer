@@ -47,7 +47,8 @@ export const SettingsSchema = z.object({
   /** true: a sort picked in the popup becomes the new default. false: it lasts until the next folder opens. */
   sortPersist: z.boolean().default(true),
   theme: z.enum(['system', 'light', 'dark']).default('system'),
-  warnOnSecretShapedValues: z.boolean().default(true),
+  // The credential nudge (guards.ts) is always on. Deliberately not a setting:
+  // an off switch would invite exactly the sloppiness it exists to interrupt.
   /** Remember a manually picked folder per site and tab (plan §5.3). false: always auto-match. */
   rememberPerSite: z.boolean().default(true),
   /**
@@ -73,7 +74,6 @@ export const MetaSchema = z.object({
     sortMode: 'manual',
     sortPersist: true,
     theme: 'system',
-    warnOnSecretShapedValues: true,
     rememberPerSite: true,
     contextMenu: 'matched',
     contextMenuInsert: true,

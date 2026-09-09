@@ -412,7 +412,7 @@ function FolderEditor({ folder, folders, store, settings, onAddChild, onDeleted,
           Snippets <span class="hint">({folder.snippets.length})</span>
         </h2>
         {editing === 'new' ? (
-          <SnippetEditor warnOnSecrets={settings.warnOnSecretShapedValues} onSave={saveSnippet} onCancel={() => setEditing(null)} />
+          <SnippetEditor onSave={saveSnippet} onCancel={() => setEditing(null)} />
         ) : (
           <div class="tree-actions" style={{ marginTop: 0, marginBottom: 12 }}>
             <button class="btn btn-primary" onClick={() => setEditing('new')}>
@@ -426,7 +426,6 @@ function FolderEditor({ folder, folders, store, settings, onAddChild, onDeleted,
               <div class="snip-row" key={s.id} style={{ display: 'block' }}>
                 <SnippetEditor
                   initial={s}
-                  warnOnSecrets={settings.warnOnSecretShapedValues}
                   onSave={saveSnippet}
                   onCancel={() => setEditing(null)}
                   onDelete={() => {

@@ -561,7 +561,7 @@ interface Meta {
   settings: {
     sortMode: 'manual' | 'mostUsed' | 'recent';
     theme: 'system' | 'light' | 'dark';
-    warnOnSecretShapedValues: boolean;  // default true
+    // (revision 5: the credential nudge is always on; the former warnOnSecretShapedValues toggle was removed)
   };
 }
 

@@ -94,16 +94,6 @@ export function SettingsTab({ store, state, notify }: { store: SnippetStore; sta
 
         <div class="setting">
           <div class="k">
-            Credential reminder<small>Nudges you if you paste something that looks like a password, key or token. Not a security control, just a friendly reminder.</small>
-          </div>
-          <label class="check">
-            <input type="checkbox" checked={s.warnOnSecretShapedValues} onChange={(e) => set({ warnOnSecretShapedValues: (e.target as HTMLInputElement).checked })} />
-            Enabled
-          </label>
-        </div>
-
-        <div class="setting">
-          <div class="k">
             Keyboard shortcut<small>Opens Command Drawer. Change it in the browser's shortcut settings.</small>
           </div>
           <div class="inline">

@@ -1,7 +1,8 @@
 /**
  * The one and only snippet form: a label and a value. No third field.
  * Both are required: the label is what lists and the right-click menu show.
- * Values are always plaintext. The secret warning informs; it never gates Save.
+ * Values are always plaintext. The secret warning is always on and informs; it
+ * never gates Save.
  */
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { MAX_LABEL_CHARS, MAX_SNIPPET_CHARS, type Snippet } from '../lib/schema';
@@ -10,7 +11,6 @@ import { IconAlert } from './icons';
 
 export interface SnippetEditorProps {
   initial?: Partial<Snippet>;
-  warnOnSecrets: boolean;
   onSave: (data: { label: string; value: string }) => void;
   onCancel: () => void;
   onDelete?: () => void;
@@ -18,7 +18,7 @@ export interface SnippetEditorProps {
   compact?: boolean;
 }
 
-export function SnippetEditor({ initial, warnOnSecrets, onSave, onCancel, onDelete, autoFocusValue, compact }: SnippetEditorProps) {
+export function SnippetEditor({ initial, onSave, onCancel, onDelete, autoFocusValue, compact }: SnippetEditorProps) {
   const [label, setLabel] = useState(initial?.label ?? '');
   const [value, setValue] = useState(initial?.value ?? '');
   const [hit, setHit] = useState<ReturnType<typeof detectSecret>>(null);
@@ -27,16 +27,12 @@ export function SnippetEditor({ initial, warnOnSecrets, onSave, onCancel, onDele
 
   // Debounced (~150ms) local-only detection on input/paste.
   useEffect(() => {
-    if (!warnOnSecrets) {
-      setHit(null);
-      return;
-    }
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setHit(detectSecret(value, label)), 150);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [value, label, warnOnSecrets]);
+  }, [value, label]);
 
   useEffect(() => {
     if (autoFocusValue) valueRef.current?.focus();
