@@ -23,7 +23,7 @@ automatically. One click copies. Nothing else.
   passwords embedded in URLs and connection strings) and literal values sitting
   right after a password/secret/key keyword (`password=…`, `-ClientSecret …`,
   `ConvertTo-SecureString "…" -AsPlainText`). It is a nudge, not a control, and it
-  can be turned off.
+  is always on: there is deliberately no switch to disable it.
 - **No backend.** No SaaS, no account, no telemetry. Sync rides on your browser
   profile sync (`chrome.storage.sync`), and JSON export/import is the backup and
   sharing story.

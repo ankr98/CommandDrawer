@@ -39,7 +39,7 @@ try {
   console.log('extension id', extId);
 
   const seed = {
-    meta: { schemaVersion: 1, folderIds: ['ps', 'exo', 'azure'], settings: { sortMode: 'manual', theme: 'light', warnOnSecretShapedValues: true } },
+    meta: { schemaVersion: 1, folderIds: ['ps', 'exo', 'azure'], settings: { sortMode: 'manual', theme: 'light' } },
     'folder:ps': {
       id: 'ps', name: 'PowerShell', parentId: null, order: 0, urlPatterns: ['https://*.microsoft.com/*'], source: 'user',
       snippets: [

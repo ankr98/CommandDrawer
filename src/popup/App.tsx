@@ -407,7 +407,6 @@ export function App() {
           <h3>{panel.kind === 'newSnippet' ? 'New snippet' : 'Edit snippet'}</h3>
           <SnippetEditor
             compact
-            warnOnSecrets={settings?.warnOnSecretShapedValues ?? true}
             initial={panel.kind === 'editSnippet' ? store.getFolder(panel.folderId)?.snippets.find((s) => s.id === panel.snippetId) : undefined}
             onSave={(d) => saveSnippet(panel.folderId, d, panel.kind === 'editSnippet' ? panel.snippetId : undefined)}
             onCancel={() => (setPanel({ kind: 'none' }), searchRef.current?.focus())}

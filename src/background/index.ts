@@ -118,7 +118,15 @@ async function deliverInTab(tabId: number, frameId: number, text: string, insert
             const isTextArea = el instanceof HTMLTextAreaElement && !el.readOnly && !el.disabled;
             if (el && (isTextInput || isTextArea || el.isContentEditable)) {
               el.focus();
-              inserted = document.execCommand('insertText', false, value);
+              // execCommand is legacy but still the only call that inserts through the
+              // browser's real text pipeline, so React/Vue-controlled fields see it as a
+              // genuine keystroke. Its own failure (return false, or — hypothetically, were
+              // it ever removed — a thrown error) must not skip the plain-field fallback below.
+              try {
+                inserted = document.execCommand('insertText', false, value);
+              } catch {
+                inserted = false;
+              }
               if (!inserted && (isTextInput || isTextArea)) {
                 const field = el as HTMLInputElement | HTMLTextAreaElement;
                 const start = field.selectionStart ?? field.value.length;
