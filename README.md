@@ -27,13 +27,16 @@ automatically. One click copies. Nothing else.
 - **No backend.** No SaaS, no account, no telemetry. Sync rides on your browser
   profile sync (`chrome.storage.sync`), and JSON export/import is the backup and
   sharing story.
-- **Minimal permissions.** `storage` and `activeTab`. No host permissions, no
-  content scripts, no `tabs`, no `clipboardRead`.
+- **Minimal permissions.** `storage`, `activeTab`, `contextMenus` and `scripting`.
+  No host permissions, no content scripts, no `tabs`, no `clipboardRead`. The
+  right-click menu is page-aware through the menu API's own URL filter, so the
+  extension never reads a URL outside the popup.
 
 ## Features (v1)
 
 - Folders one level deep (`PowerShell > Exchange Online`), each with its own
   snippets and URL patterns. Sub-folders do **not** inherit their parent's patterns.
+  Folders list A-Z by default; a setting switches to manual drag-and-drop order.
 - Chrome match-pattern URL mapping per folder with specificity scoring:
   `https://admin.site.com/feature/*` beats `https://admin.site.com/*`, exact hosts
   beat `*.` wildcards. Children compete with roots on equal terms. A live tester
@@ -52,6 +55,12 @@ automatically. One click copies. Nothing else.
   recently used sorting, with a default order and a choice of whether a sort picked
   in the drawer sticks or resets per folder; "Include sub-folder snippets" roll-up
   for parents.
+- Page right-click menu: **Command Drawer ▸** lists snippets by label (labels are
+  required). Default mode shows the folders whose URL patterns match the page first,
+  then *All folders*; a setting switches to the plain tree from the top, or off.
+  Picking a snippet in a text field pastes it at the cursor and copies it; elsewhere
+  it copies. A tick flashes on the toolbar icon either way. Paste-into-field can be
+  turned off.
 - Options page with drag-and-drop tree management, a live pattern tester, quota
   meter, sync notes, dark mode, JSON import/export that preserves hierarchy, and
   an About page.
@@ -66,7 +75,7 @@ Requires Node 20+.
 
 ```sh
 npm install
-npm test          # vitest: storage, tree, matcher, session, guards, search, transfer
+npm test          # vitest: storage, tree, matcher, session, guards, search, transfer, context-menu
 npm run build     # typecheck + vite build → dist/
 npm run dev       # rebuild on change
 ```

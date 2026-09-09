@@ -12,6 +12,12 @@ when sync storage is full).
   permission), to pick the folder to show. That URL is not stored beyond the
   current browser session and is never transmitted.
 - It **writes** to the clipboard when you click a snippet. It never reads the clipboard.
+- The page right-click menu shows folders by URL pattern using the browser's own
+  menu filter; the extension does not see which page you are on. When you pick a
+  snippet from that menu, the browser grants the extension access to that one tab
+  (`activeTab`) and it runs a tiny script there whose only job is to write the
+  snippet to the clipboard and, if you right-clicked inside a text field, into that
+  field. Nothing is read from the page.
 - Credential-shape detection runs locally while you type and records nothing.
 
 Snippet values are stored **unencrypted**. The extension adds no encryption layer

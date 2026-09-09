@@ -1,5 +1,6 @@
 /**
  * The one and only snippet form: a label and a value. No third field.
+ * Both are required: the label is what lists and the right-click menu show.
  * Values are always plaintext. The secret warning informs; it never gates Save.
  */
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
@@ -43,7 +44,8 @@ export function SnippetEditor({ initial, warnOnSecrets, onSave, onCancel, onDele
 
   const valueOver = value.length > MAX_SNIPPET_CHARS;
   const labelOver = label.length > MAX_LABEL_CHARS;
-  const canSave = value.trim().length > 0 && !valueOver && !labelOver;
+  const labelMissing = label.trim().length === 0;
+  const canSave = !labelMissing && value.trim().length > 0 && !valueOver && !labelOver;
   const valueHint = useMemo(() => `${value.length} / ${MAX_SNIPPET_CHARS}`, [value.length]);
 
   const submit = (e?: Event) => {
@@ -67,7 +69,7 @@ export function SnippetEditor({ initial, warnOnSecrets, onSave, onCancel, onDele
     >
       <label class="field">
         <span>
-          Label <span class="hint">(optional)</span>
+          Label {labelMissing ? <span class="hint">(required)</span> : null}
           <span class={`counter ${labelOver ? 'over' : ''}`}>{label.length} / {MAX_LABEL_CHARS}</span>
         </span>
         <input

@@ -12,6 +12,8 @@ type DropMode = 'before' | 'after' | 'into';
 
 export function FoldersTab({ store, state, selectedId, onSelect, notify }: { store: SnippetStore; state: LoadedState; selectedId: string | null; onSelect: (id: string | null) => void; notify: (msg: string, kind?: 'ok' | 'warn') => void }) {
   const folders = state.folders;
+  const folderSort = state.meta.settings.folderSort;
+  const manual = folderSort === 'manual';
   const selected = selectedId ? folders.find((f) => f.id === selectedId) ?? null : null;
   const [dragId, setDragId] = useState<string | null>(null);
   const [drop, setDrop] = useState<{ id: string; mode: DropMode; ok: boolean } | null>(null);
@@ -19,13 +21,13 @@ export function FoldersTab({ store, state, selectedId, onSelect, notify }: { sto
 
   const rows = useMemo(() => {
     const out: Array<{ folder: Folder; depth: number; last: boolean }> = [];
-    for (const r of rootFolders(folders)) {
+    for (const r of rootFolders(folders, folderSort)) {
       out.push({ folder: r, depth: 1, last: false });
-      const kids = childrenOf(folders, r.id);
+      const kids = childrenOf(folders, r.id, folderSort);
       kids.forEach((c, i) => out.push({ folder: c, depth: 2, last: i === kids.length - 1 }));
     }
     return out;
-  }, [folders]);
+  }, [folders, folderSort]);
 
   const addRoot = () => {
     const name = newName.trim();
@@ -53,7 +55,9 @@ export function FoldersTab({ store, state, selectedId, onSelect, notify }: { sto
     const el = e.currentTarget as HTMLElement;
     const rect = el.getBoundingClientRect();
     const y = (e.clientY - rect.top) / rect.height;
-    const mode: DropMode = y < 0.3 ? 'before' : y > 0.7 ? 'after' : 'into';
+    // Alphabetical: "before/after" would be a lie, so a drop only changes the level —
+    // onto a top-level folder to nest, beside a sub-folder to move to that level.
+    const mode: DropMode = manual ? (y < 0.3 ? 'before' : y > 0.7 ? 'after' : 'into') : target.parentId === null ? 'into' : 'after';
     if (!dragId || dragId === target.id) return { mode, ok: false };
     if (mode === 'into') {
       const r = canMove(folders, dragId, target.id);
@@ -90,7 +94,7 @@ export function FoldersTab({ store, state, selectedId, onSelect, notify }: { sto
       <div class="card">
         <h2>Folders</h2>
         <p class="hint" style={{ marginTop: 0 }}>
-          Drag to reorder. Drop onto a top-level folder to make it a sub-folder. One level of nesting only.
+          {manual ? 'Drag to reorder. Drop onto a top-level folder to make it a sub-folder.' : 'Sorted A-Z (change in Settings). Drop onto a top-level folder to make it a sub-folder.'} One level of nesting only.
         </p>
         <div class="tree" onDragLeave={() => setDrop(null)}>
           {rows.length === 0 ? <div class="empty">No folders yet.</div> : null}
@@ -280,7 +284,7 @@ function FolderEditor({ folder, folders, store, settings, onAddChild, onDeleted,
   const [lastUrl, setLastUrl] = useState<string | null>(null);
   const [editing, setEditing] = useState<'new' | string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const children = childrenOf(folders, folder.id);
+  const children = childrenOf(folders, folder.id, settings.folderSort);
   const isRoot = folder.parentId === null;
 
   useEffect(() => {
