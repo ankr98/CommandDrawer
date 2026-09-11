@@ -606,7 +606,9 @@ mode, empty states.
 
 **P5 — Ship.** Icons, screenshots, store listings, privacy policy (short and honest: no
 data leaves the browser except via the user's own profile sync), README, MIT license,
-public GitHub repo.
+public GitHub repo. (Revision 6: relicensed GPL-3.0-or-later before the public GitHub
+repo and store listings went live, so a fork can't be turned into a closed, paid product;
+the "Command Drawer" name and icon are carved out of the grant, see README §License.)
 
 **P6 — v2 features.** Placeholder tokens; `storage.managed` policy folders with ADMX /
 Intune deployment notes; optional context-menu capture.

@@ -16,7 +16,7 @@ export function AboutTab() {
               Command Drawer
               {version ? <span class="version">v{version}</span> : null}
             </h2>
-            <p class="hint">Context-aware command snippets for people who administer things. Free and open source, MIT licensed.</p>
+            <p class="hint">Context-aware command snippets for people who administer things. Free and open source, GPL-3.0 licensed.</p>
           </div>
         </div>
       </div>
@@ -48,10 +48,19 @@ export function AboutTab() {
           <li>No backend, no account, no analytics, no network requests.</li>
           <li>Data stays in your browser and only moves through your own profile sync.</li>
           <li>
-            Permissions: <code>storage</code> and <code>activeTab</code>. The current tab's URL is read only when you open the drawer, to pick the folder.
+            Permissions: <code>storage</code>, <code>activeTab</code>, <code>contextMenus</code> and <code>scripting</code>. The current tab's URL is read only when you open the drawer, to pick the folder. The right-click menu is
+            filtered by the browser itself; picking a snippet there runs a script in that one tab to paste and copy it, and nothing is read from the page.
           </li>
           <li>Credential detection runs locally and records nothing.</li>
         </ul>
+      </div>
+
+      <div class="card">
+        <h2>Third-party components</h2>
+        <p class="hint">
+          Icons from <a href="https://lucide.dev" target="_blank" rel="noopener noreferrer">Lucide</a> (ISC). Built with <a href="https://preactjs.com" target="_blank" rel="noopener noreferrer">Preact</a> and{' '}
+          <a href="https://zod.dev" target="_blank" rel="noopener noreferrer">Zod</a> (MIT). No fonts are bundled. Full notices in <code>THIRD-PARTY-NOTICES.txt</code> inside the extension package.
+        </p>
       </div>
     </>
   );

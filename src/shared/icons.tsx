@@ -1,5 +1,7 @@
 /**
- * Inline SVG icons, stroke-based in the Lucide style (ISC/MIT-compatible shapes).
+ * Inline SVG icons: Lucide (https://lucide.dev, ISC) path data, some Feather-derived
+ * (MIT). Both notices are reproduced in public/THIRD-PARTY-NOTICES.txt, which ships
+ * in the package. Keep that file in step when adding icons.
  * Kebab-case attributes on purpose: Preact core sets SVG attributes verbatim.
  * Unicode glyphs (⚙ ✎ ▸) render differently on every OS; these do not.
  */
