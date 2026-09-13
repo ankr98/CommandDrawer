@@ -49,8 +49,8 @@ automatically. One click copies. Nothing else.
   offers to open that folder on this site from now on. *Map to host* also lives in
   the folder menu.
 - Keyboard-first popup: search is focused on open, type to filter the whole tree,
-  ↑/↓ to move, Enter to copy and close, Esc/Backspace to go up. Global shortcut
-  `Ctrl+Shift+Y` (rebindable in the browser).
+  ↑/↓ to move, Enter to copy and close, Esc/Backspace to go up. No global shortcut
+  is set by default; assign one from the Settings tab or the browser's shortcut page.
 - Inline "Copied" confirmation on the row; usage counts with manual / most used /
   recently used sorting, with a default order and a choice of whether a sort picked
   in the drawer sticks or resets per folder; "Include sub-folder snippets" roll-up
