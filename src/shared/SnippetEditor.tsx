@@ -1,14 +1,16 @@
 /**
  * The one and only snippet form: a label and a value. No third field.
- * Values are always plaintext. The secret warning informs; it never gates Save.
+ * Both are required: the label is what lists and the right-click menu show.
+ * Values are always plaintext. The secret warning is always on and informs; it
+ * never gates Save.
  */
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { MAX_LABEL_CHARS, MAX_SNIPPET_CHARS, type Snippet } from '../lib/schema';
-import { detectSecret, SECRET_WARNING_TEXT } from '../lib/guards';
+import { detectSecret, secretWarning } from '../lib/guards';
+import { IconAlert } from './icons';
 
 export interface SnippetEditorProps {
   initial?: Partial<Snippet>;
-  warnOnSecrets: boolean;
   onSave: (data: { label: string; value: string }) => void;
   onCancel: () => void;
   onDelete?: () => void;
@@ -16,7 +18,7 @@ export interface SnippetEditorProps {
   compact?: boolean;
 }
 
-export function SnippetEditor({ initial, warnOnSecrets, onSave, onCancel, onDelete, autoFocusValue, compact }: SnippetEditorProps) {
+export function SnippetEditor({ initial, onSave, onCancel, onDelete, autoFocusValue, compact }: SnippetEditorProps) {
   const [label, setLabel] = useState(initial?.label ?? '');
   const [value, setValue] = useState(initial?.value ?? '');
   const [hit, setHit] = useState<ReturnType<typeof detectSecret>>(null);
@@ -25,16 +27,12 @@ export function SnippetEditor({ initial, warnOnSecrets, onSave, onCancel, onDele
 
   // Debounced (~150ms) local-only detection on input/paste.
   useEffect(() => {
-    if (!warnOnSecrets) {
-      setHit(null);
-      return;
-    }
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setHit(detectSecret(value)), 150);
+    timer.current = setTimeout(() => setHit(detectSecret(value, label)), 150);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [value, warnOnSecrets]);
+  }, [value, label]);
 
   useEffect(() => {
     if (autoFocusValue) valueRef.current?.focus();
@@ -42,7 +40,8 @@ export function SnippetEditor({ initial, warnOnSecrets, onSave, onCancel, onDele
 
   const valueOver = value.length > MAX_SNIPPET_CHARS;
   const labelOver = label.length > MAX_LABEL_CHARS;
-  const canSave = value.trim().length > 0 && !valueOver && !labelOver;
+  const labelMissing = label.trim().length === 0;
+  const canSave = !labelMissing && value.trim().length > 0 && !valueOver && !labelOver;
   const valueHint = useMemo(() => `${value.length} / ${MAX_SNIPPET_CHARS}`, [value.length]);
 
   const submit = (e?: Event) => {
@@ -66,7 +65,7 @@ export function SnippetEditor({ initial, warnOnSecrets, onSave, onCancel, onDele
     >
       <label class="field">
         <span>
-          Label <span class="hint">(optional)</span>
+          Label {labelMissing ? <span class="hint">(required)</span> : null}
           <span class={`counter ${labelOver ? 'over' : ''}`}>{label.length} / {MAX_LABEL_CHARS}</span>
         </span>
         <input
@@ -91,8 +90,18 @@ export function SnippetEditor({ initial, warnOnSecrets, onSave, onCancel, onDele
           placeholder="Command, query, id or URL — stored exactly as typed, in plaintext"
           onInput={(e) => setValue((e.target as HTMLTextAreaElement).value)}
         />
-        {hit ? <div class="warn-line">{SECRET_WARNING_TEXT}</div> : null}
-        {valueOver ? <div class="warn-line">Values are limited to {MAX_SNIPPET_CHARS} characters. Long blocks belong in a script file, not a snippet.</div> : null}
+        {hit ? (
+          <div class="warn-line" role="alert">
+            <IconAlert size={14} />
+            <span>{secretWarning(hit)}</span>
+          </div>
+        ) : null}
+        {valueOver ? (
+          <div class="warn-line">
+            <IconAlert size={14} />
+            <span>Values are limited to {MAX_SNIPPET_CHARS} characters. Long blocks belong in a script file, not a snippet.</span>
+          </div>
+        ) : null}
       </label>
       <div class="row-actions">
         {onDelete ? (

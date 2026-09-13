@@ -12,6 +12,8 @@ import {
   recoverOrphans,
   reorderFolder,
   rollUp,
+  rootFolders,
+  sortSiblings,
 } from '../src/lib/tree';
 
 const ps = newFolder({ id: 'ps', name: 'PowerShell', order: 0 });
@@ -96,6 +98,28 @@ describe('recoverOrphans', () => {
     const { folders, fixes } = recoverOrphans([ps, ps]);
     expect(folders).toHaveLength(1);
     expect(fixes).toHaveLength(1);
+  });
+});
+
+describe('display order', () => {
+  const mixed = [
+    newFolder({ id: 'b', name: 'beta', order: 0 }),
+    newFolder({ id: 'a10', name: 'Alpha 10', order: 1 }),
+    newFolder({ id: 'a2', name: 'alpha 2', order: 2 }),
+    newFolder({ id: 'z', name: 'Zulu', order: 3, parentId: 'b' }),
+    newFolder({ id: 'c', name: 'charlie', order: 0, parentId: 'b' }),
+  ];
+  it('manual keeps the stored order', () => {
+    expect(rootFolders(mixed, 'manual').map((f) => f.id)).toEqual(['b', 'a10', 'a2']);
+    expect(childrenOf(mixed, 'b', 'manual').map((f) => f.id)).toEqual(['c', 'z']);
+  });
+  it('alpha sorts by name, case-insensitively, numbers in natural order', () => {
+    expect(rootFolders(mixed, 'alpha').map((f) => f.id)).toEqual(['a2', 'a10', 'b']);
+    expect(childrenOf(mixed, 'b', 'alpha').map((f) => f.id)).toEqual(['c', 'z']);
+    expect(sortSiblings(mixed.filter((f) => f.parentId === null), 'alpha').map((f) => f.name)).toEqual(['alpha 2', 'Alpha 10', 'beta']);
+  });
+  it('the default is manual so structural helpers are unaffected', () => {
+    expect(rootFolders(mixed).map((f) => f.id)).toEqual(['b', 'a10', 'a2']);
   });
 });
 

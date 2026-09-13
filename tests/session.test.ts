@@ -6,12 +6,9 @@ import {
   clearTab,
   evictIfNeeded,
   getOverride,
-  markSuggested,
   MemorySession,
   overrideKey,
-  recordManualPick,
   setOverride,
-  shouldSuggestMapping,
 } from '../src/lib/session';
 
 const admin = newFolder({ id: 'admin', name: 'Admin', urlPatterns: ['https://admin.site.com/*'] });
@@ -26,7 +23,7 @@ async function openPopup(area: MemorySession, tabId: number, url: string) {
   return resolveFolder(folders, url, ov);
 }
 
-describe('override memory — §5.3 / §5.4', () => {
+describe('override memory', () => {
   it('key shape', () => {
     expect(overrideKey(7, ORIGIN)).toBe('override:7:https://admin.site.com');
   });
@@ -80,18 +77,5 @@ describe('override memory — §5.3 / §5.4', () => {
     // setOverride evicts automatically
     await setOverride(s, 999, ORIGIN, 'ps');
     expect([...s.data.keys()].filter((k) => k.startsWith('override:')).length).toBe(200);
-  });
-});
-
-describe('discovery affordance — §5.5', () => {
-  it('suggests once after the third pick on a host, then never again', async () => {
-    const s = new MemorySession();
-    await recordManualPick(s, 'intune.microsoft.com', 'ps');
-    await recordManualPick(s, 'intune.microsoft.com', 'ps');
-    expect(await shouldSuggestMapping(s, 'intune.microsoft.com', 'ps')).toBe(false);
-    await recordManualPick(s, 'intune.microsoft.com', 'ps');
-    expect(await shouldSuggestMapping(s, 'intune.microsoft.com', 'ps')).toBe(true);
-    await markSuggested(s, 'intune.microsoft.com');
-    expect(await shouldSuggestMapping(s, 'intune.microsoft.com', 'ps')).toBe(false);
   });
 });

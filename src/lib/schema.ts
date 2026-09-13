@@ -1,5 +1,5 @@
 /**
- * Data model, validation and constants. See plan §6 and §8.
+ * Data model, validation and constants.
  *
  * A snippet is a display name plus ONE value. There is deliberately no third
  * field. Do not add one.
@@ -40,19 +40,43 @@ export const FolderSchema = z.object({
 export type Folder = z.infer<typeof FolderSchema>;
 
 export const SettingsSchema = z.object({
+  /** How folders are listed everywhere: A-Z, or the order you arranged by drag-and-drop. */
+  folderSort: z.enum(['alpha', 'manual']).default('alpha'),
+  /** Default snippet order when a folder opens. */
   sortMode: z.enum(['manual', 'mostUsed', 'recent']).default('manual'),
+  /** true: a sort picked in the popup becomes the new default. false: it lasts until the next folder opens. */
+  sortPersist: z.boolean().default(true),
   theme: z.enum(['system', 'light', 'dark']).default('system'),
-  warnOnSecretShapedValues: z.boolean().default(true),
+  // The credential nudge (guards.ts) is always on. Deliberately not a setting:
+  // an off switch would invite exactly the sloppiness it exists to interrupt.
+  /** Remember a manually picked folder per site and tab . false: always auto-match. */
+  rememberPerSite: z.boolean().default(true),
+  /**
+   * "Command Drawer" entry in the page right-click menu.
+   *   off      — no menu
+   *   all      — the whole folder tree, from the top
+   *   matched  — folders whose URL patterns match the page first, then the whole tree
+   */
+  contextMenu: z.enum(['off', 'all', 'matched']).default('matched'),
+  /** Right-click menu on a text field: true = paste at the cursor (and copy). false = copy only. */
+  contextMenuInsert: z.boolean().default(true),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
+export type SortMode = Settings['sortMode'];
+export type FolderSort = Settings['folderSort'];
+export type ContextMenuMode = Settings['contextMenu'];
 
 export const MetaSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
   folderIds: z.array(z.string()).default([]),
   settings: SettingsSchema.default({
+    folderSort: 'alpha',
     sortMode: 'manual',
+    sortPersist: true,
     theme: 'system',
-    warnOnSecretShapedValues: true,
+    rememberPerSite: true,
+    contextMenu: 'matched',
+    contextMenuInsert: true,
   }),
 });
 export type Meta = z.infer<typeof MetaSchema>;

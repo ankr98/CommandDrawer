@@ -1,6 +1,6 @@
 /**
  * Chrome match-pattern parsing, specificity scoring and folder resolution.
- * Pure functions only. Plan §5.1 / §5.2.
+ * Pure functions only.
  */
 import type { Folder } from './schema';
 import { depthOf } from './tree';
@@ -123,7 +123,7 @@ function literalChars(path: string): number {
 }
 
 /**
- * Specificity tiers, most specific first (plan §5.1):
+ * Specificity tiers, most specific first:
  *   1. exact host + specific path        4. subdomain wildcard + '/*'
  *   2. exact host + '/*'                 5. any host / everything else
  *   3. subdomain wildcard + specific path
@@ -203,7 +203,7 @@ export type Resolution =
   | { kind: 'none'; folderId: null };
 
 /**
- * Selection precedence on popup open (plan §5.2):
+ * Selection precedence on popup open:
  *   1. session override for this tab + origin
  *   2. best auto-match
  *   3. root view
@@ -241,20 +241,58 @@ export function patternForHost(url: string): string | null {
   return `${scheme}://${u.hostname}/*`;
 }
 
-export interface Preset {
-  name: string;
-  patterns: string[];
+/**
+ * A concrete URL that a pattern matches, with wildcards filled by plain
+ * placeholders. Used to ask "who wins on the URLs this pattern is about?".
+ * Returns null for invalid patterns.
+ */
+export function sampleUrl(pattern: string | ParsedPattern): string | null {
+  const p = typeof pattern === 'string' ? parsePattern(pattern) : pattern;
+  if (!p) return null;
+  const scheme = p.scheme === '*' ? 'https' : p.scheme;
+  const host = p.scheme === 'file' ? '' : p.anyHost ? 'example.com' : p.subdomainWildcard ? `sub.${p.host}` : p.host;
+  return `${scheme}://${host}${p.path.replace(/\*/g, 'x')}`;
 }
 
-/** One-click presets for the folder pattern editor. */
-export const PRESETS: Preset[] = [
-  { name: 'Entra admin center', patterns: ['https://entra.microsoft.com/*'] },
-  { name: 'Intune admin center', patterns: ['https://intune.microsoft.com/*', 'https://endpoint.microsoft.com/*'] },
-  { name: 'Azure portal', patterns: ['https://portal.azure.com/*'] },
-  { name: 'Graph Explorer', patterns: ['https://developer.microsoft.com/*graph*'] },
-  { name: 'Exchange admin center', patterns: ['https://admin.exchange.microsoft.com/*'] },
-  { name: 'Microsoft 365 admin center', patterns: ['https://admin.microsoft.com/*', 'https://admin.cloud.microsoft/*'] },
-  { name: 'Purview', patterns: ['https://purview.microsoft.com/*', 'https://compliance.microsoft.com/*'] },
-  { name: 'Defender', patterns: ['https://security.microsoft.com/*'] },
-  { name: 'GitHub', patterns: ['https://github.com/*'] },
-];
+export interface Shadow {
+  /** This folder's pattern that loses. */
+  pattern: string;
+  /** The folder that opens instead. */
+  by: Folder;
+  /** Its winning pattern. */
+  byPattern: string;
+  /** True when both patterns are equally specific and folder order decided. */
+  tie: boolean;
+}
+
+/**
+ * Patterns in OTHER folders that take precedence over this folder's patterns on
+ * the URLs they cover. For every pattern Q elsewhere whose sample URL one of this
+ * folder's patterns also matches, report Q's folder if it wins there. One entry
+ * per (winning folder, winning pattern).
+ */
+export function shadowedBy(folders: readonly Folder[], folderId: string): Shadow[] {
+  const me = folders.find((f) => f.id === folderId);
+  if (!me) return [];
+  const mine = me.urlPatterns.map(parsePattern).filter((p): p is ParsedPattern => p !== null);
+  if (!mine.length) return [];
+  const out: Shadow[] = [];
+  const seen = new Set<string>();
+  for (const other of folders) {
+    if (other.id === folderId) continue;
+    for (const q of other.urlPatterns) {
+      const sample = sampleUrl(q);
+      const u = sample ? parseUrl(sample) : null;
+      if (!u || !matches(q, u)) continue;
+      const losing = mine.find((p) => matches(p, u));
+      if (!losing) continue;
+      const w = bestMatch(folders, u);
+      if (!w || w.folder.id === folderId) continue;
+      const key = `${w.folder.id}\n${w.pattern}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ pattern: losing.raw, by: w.folder, byPattern: w.pattern, tie: score(w.pattern, u) === score(losing, u) });
+    }
+  }
+  return out;
+}

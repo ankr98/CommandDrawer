@@ -9,11 +9,55 @@ import {
   originOf,
   parsePattern,
   patternForHost,
-  PRESETS,
   resolveFolder,
   ROOT_OVERRIDE,
+  sampleUrl,
   score,
+  shadowedBy,
 } from '../src/lib/matcher';
+
+describe('sampleUrl / shadowedBy — static overlap warnings', () => {
+  it.each(['https://portal.azure.com/*', '*://*.microsoft.com/*', 'https://developer.microsoft.com/*graph*', '<all_urls>', 'http://*/*', 'https://x.com/a/*', 'https://x.com/*tab=users*', 'file:///*'])(
+    'sample of %s matches its own pattern',
+    (p) => {
+      const s = sampleUrl(p)!;
+      expect(s).not.toBeNull();
+      expect(matches(p, s)).toBe(true);
+    },
+  );
+  it('fills wildcards with plain placeholders', () => {
+    expect(sampleUrl('https://portal.azure.com/*')).toBe('https://portal.azure.com/x');
+    expect(sampleUrl('*://*.microsoft.com/*')).toBe('https://sub.microsoft.com/x');
+    expect(sampleUrl('<all_urls>')).toBe('https://example.com/x');
+    expect(sampleUrl('garbage')).toBeNull();
+  });
+  it('a broad folder is told which more specific folders win on their URLs', () => {
+    const wide = newFolder({ id: 'wide', name: 'PowerShell', order: 0, urlPatterns: ['https://*.microsoft.com/*'] });
+    const exo = newFolder({ id: 'exo', name: 'Exchange Online', parentId: 'wide', order: 0, urlPatterns: ['https://admin.exchange.microsoft.com/*'] });
+    const unrelated = newFolder({ id: 'gh', name: 'GitHub', order: 1, urlPatterns: ['https://github.com/*'] });
+    const sh = shadowedBy([wide, exo, unrelated], 'wide');
+    expect(sh).toHaveLength(1);
+    expect(sh[0]).toMatchObject({ pattern: 'https://*.microsoft.com/*', byPattern: 'https://admin.exchange.microsoft.com/*', tie: false });
+    expect(sh[0]!.by.id).toBe('exo');
+    expect(shadowedBy([wide, exo, unrelated], 'exo')).toEqual([]);
+    expect(shadowedBy([wide, exo, unrelated], 'gh')).toEqual([]);
+  });
+  it('an identical pattern in a folder higher in the list is reported as a tie', () => {
+    const first = newFolder({ id: 'a', name: 'A', order: 0, urlPatterns: ['https://portal.azure.com/*'] });
+    const second = newFolder({ id: 'b', name: 'B', order: 1, urlPatterns: ['https://portal.azure.com/*'] });
+    const sh = shadowedBy([first, second], 'b');
+    expect(sh).toHaveLength(1);
+    expect(sh[0]).toMatchObject({ tie: true, byPattern: 'https://portal.azure.com/*' });
+    expect(sh[0]!.by.id).toBe('a');
+    expect(shadowedBy([first, second], 'a')).toEqual([]);
+  });
+  it('dedupes per winning folder and pattern, ignores invalid patterns and unknown folders', () => {
+    const wide = newFolder({ id: 'wide', name: 'W', order: 0, urlPatterns: ['https://*.microsoft.com/*', '*://*.microsoft.com/*', 'not a pattern'] });
+    const exo = newFolder({ id: 'exo', name: 'E', order: 1, urlPatterns: ['https://admin.exchange.microsoft.com/*'] });
+    expect(shadowedBy([wide, exo], 'wide')).toHaveLength(1);
+    expect(shadowedBy([wide, exo], 'nope')).toEqual([]);
+  });
+});
 
 describe('parsePattern', () => {
   it.each([
@@ -75,7 +119,7 @@ describe('matches — fixture table', () => {
 describe('score — specificity tiers', () => {
   const url = 'https://admin.site.com/feature/x/y';
   const s = (p: string) => score(p, url)!;
-  it('exact host + path beats exact host + /* (the case called for in §5.1)', () => {
+  it('exact host + path beats exact host + /* (the case called for in the spec)', () => {
     expect(s('https://admin.site.com/feature/*')).toBeGreaterThan(s('https://admin.site.com/*'));
   });
   it('exact host + /* beats wildcard subdomain + path', () => {
@@ -111,7 +155,7 @@ const exo = newFolder({ id: 'exo', name: 'Exchange Online', parentId: 'ps', orde
 const graph = newFolder({ id: 'graph', name: 'Graph API', parentId: 'ps', order: 1, urlPatterns: [] });
 const folders = [root, feature, ps, exo, graph];
 
-describe('bestMatch / resolveFolder — §5.4 acceptance criteria', () => {
+describe('bestMatch / resolveFolder — acceptance criteria', () => {
   it('two folders match, /feature/* wins on /feature/x', () => {
     expect(bestMatch(folders, 'https://admin.site.com/feature/x')!.folder.id).toBe('feature');
     expect(bestMatch(folders, 'https://admin.site.com/other')!.folder.id).toBe('root');
@@ -163,9 +207,5 @@ describe('helpers', () => {
     expect(patternForHost('https://intune.microsoft.com/#view/x')).toBe('https://intune.microsoft.com/*');
     expect(patternForHost('http://localhost:3000/')).toBe('http://localhost/*');
     expect(patternForHost('about:blank')).toBeNull();
-  });
-  it('all presets are valid patterns', () => {
-    for (const p of PRESETS) for (const pat of p.patterns) expect(isValidPattern(pat)).toBe(true);
-    expect(matches(PRESETS.find((p) => p.name === 'Graph Explorer')!.patterns[0]!, 'https://developer.microsoft.com/en-us/graph/graph-explorer')).toBe(true);
   });
 });

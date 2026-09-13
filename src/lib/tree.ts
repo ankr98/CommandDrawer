@@ -1,24 +1,34 @@
 /**
  * Folder hierarchy over a flat `Folder[]` with `parentId`. Pure functions.
- * Depth is enforced HERE (plan §4) — the options page, import and drag-and-drop
+ * Depth is enforced HERE — the options page, import and drag-and-drop
  * are three separate paths into the same invariant.
  */
-import { MAX_DEPTH, type Folder, type Snippet } from './schema';
+import { MAX_DEPTH, type Folder, type FolderSort, type Snippet } from './schema';
 
 export type MoveResult = { ok: true } | { ok: false; reason: string };
 
 const byOrder = (a: Folder, b: Folder) => a.order - b.order || a.name.localeCompare(b.name);
+const byName = (a: Folder, b: Folder) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }) || a.order - b.order;
+
+/**
+ * Display order for siblings. 'manual' is the stored `order` (drag-and-drop);
+ * 'alpha' ignores it and sorts by name, case-insensitively, numbers in natural
+ * order. Structural code (move, renumber, delete) always works on `order`.
+ */
+export function sortSiblings(folders: readonly Folder[], sort: FolderSort = 'manual'): Folder[] {
+  return [...folders].sort(sort === 'alpha' ? byName : byOrder);
+}
 
 export function byId(folders: readonly Folder[]): Map<string, Folder> {
   return new Map(folders.map((f) => [f.id, f]));
 }
 
-export function childrenOf(folders: readonly Folder[], parentId: string | null): Folder[] {
-  return folders.filter((f) => f.parentId === parentId).sort(byOrder);
+export function childrenOf(folders: readonly Folder[], parentId: string | null, sort: FolderSort = 'manual'): Folder[] {
+  return sortSiblings(folders.filter((f) => f.parentId === parentId), sort);
 }
 
-export function rootFolders(folders: readonly Folder[]): Folder[] {
-  return childrenOf(folders, null);
+export function rootFolders(folders: readonly Folder[], sort: FolderSort = 'manual'): Folder[] {
+  return childrenOf(folders, null, sort);
 }
 
 /** Root folders have depth 1. Returns 0 for an unknown id. Cycles are capped. */
@@ -56,13 +66,13 @@ export function pathLabel(folders: readonly Folder[], id: string, sep = ' / '): 
     .join(sep);
 }
 
-export function descendants(folders: readonly Folder[], id: string): Folder[] {
+export function descendants(folders: readonly Folder[], id: string, sort: FolderSort = 'manual'): Folder[] {
   const out: Folder[] = [];
   const queue = [id];
   const seen = new Set<string>();
   while (queue.length) {
     const cur = queue.shift()!;
-    for (const child of childrenOf(folders, cur)) {
+    for (const child of childrenOf(folders, cur, sort)) {
       if (seen.has(child.id)) continue;
       seen.add(child.id);
       out.push(child);
@@ -220,11 +230,11 @@ export function recoverOrphans(folders: readonly Folder[]): { folders: Folder[];
 export type RolledUpGroup = { folder: Folder; path: string; snippets: Snippet[] };
 
 /** Snippets of `id` plus its descendants, grouped by folder with the folder path. */
-export function rollUp(folders: readonly Folder[], id: string): RolledUpGroup[] {
+export function rollUp(folders: readonly Folder[], id: string, sort: FolderSort = 'manual'): RolledUpGroup[] {
   const self = byId(folders).get(id);
   if (!self) return [];
   const groups: RolledUpGroup[] = [{ folder: self, path: self.name, snippets: self.snippets }];
-  for (const d of descendants(folders, id)) {
+  for (const d of descendants(folders, id, sort)) {
     groups.push({ folder: d, path: pathLabel(folders, d.id), snippets: d.snippets });
   }
   return groups;

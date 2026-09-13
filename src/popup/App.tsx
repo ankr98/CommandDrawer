@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { newFolder, newSnippet, type Folder, type Snippet } from '../lib/schema';
+import { newFolder, newSnippet, type Folder, type Snippet, type SortMode } from '../lib/schema';
 import { canCreateUnder, childrenOf, deleteAndPromoteChildren, deleteCascade, nextOrder, pathOf, rollUp, rootFolders } from '../lib/tree';
-import { originOf, parseUrl, patternForHost, resolveFolder, ROOT_OVERRIDE, type Resolution } from '../lib/matcher';
-import { chromeSession, clearOverride, getOverride, markSuggested, recordManualPick, rememberLastUrl, setOverride, shouldSuggestMapping } from '../lib/session';
+import { bestMatch, originOf, parseUrl, patternForHost, resolveFolder, ROOT_OVERRIDE } from '../lib/matcher';
+import { chromeSession, clearOverride, getOverride, rememberLastUrl, setOverride } from '../lib/session';
 import { searchSnippets, sortSnippets, type SearchHit } from '../lib/search';
 import { copyText } from '../lib/clipboard';
-import { PLAINTEXT_DISCLOSURE } from '../lib/guards';
+import { FOOTER_DISCLOSURE } from '../lib/guards';
 import { useStore } from '../shared/store';
 import { getActiveTab, openOptions, type ActiveTab } from '../shared/browser';
 import { SnippetEditor } from '../shared/SnippetEditor';
+import { IconCheck, IconChevronLeft, IconChevronRight, IconFolder, IconLockOpen, IconMore, IconPencil, IconPlus, IconSearch, IconSettings, IconSort } from '../shared/icons';
 
 type Item =
   | { kind: 'folder'; folder: Folder; key: string }
@@ -23,31 +24,39 @@ type Panel =
   | { kind: 'renameFolder'; folderId: string }
   | { kind: 'deleteFolder'; folderId: string };
 
+const SORT_OPTIONS: Array<{ id: SortMode; label: string }> = [
+  { id: 'manual', label: 'Manual order' },
+  { id: 'mostUsed', label: 'Most used' },
+  { id: 'recent', label: 'Recently used' },
+];
+
 const session = chromeSession();
 
 export function App() {
   const { store, state } = useStore();
   const [tab, setTab] = useState<ActiveTab | null>(null);
-  const [resolution, setResolution] = useState<Resolution | null>(null);
+  const [ready, setReady] = useState(false);
   const [viewId, setViewId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const [panel, setPanel] = useState<Panel>({ kind: 'none' });
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [chipHidden, setChipHidden] = useState(false);
   const [suggest, setSuggest] = useState<{ host: string; folderId: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+  const [sessionSort, setSessionSort] = useState<SortMode | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const initialised = useRef(false);
-  const initialKind = useRef<Resolution['kind']>('none');
 
   const folders = state?.folders ?? [];
   const settings = state?.meta.settings;
+  const remember = settings?.rememberPerSite ?? true;
+  const folderSort = settings?.folderSort ?? 'alpha';
   const origin = originOf(tab?.url);
 
-  // Initial resolution: override → auto-match → root.
+  // Initial resolution: remembered pick (if enabled) → auto-match → root.
   useEffect(() => {
     if (!state || initialised.current) return;
     initialised.current = true;
@@ -56,47 +65,68 @@ export function App() {
       setTab(t);
       if (t.url) void rememberLastUrl(session, t.url);
       const o = originOf(t.url);
-      const override = t.id !== null && o ? await getOverride(session, t.id, o) : null;
-      const res = resolveFolder(state.folders, t.url, override);
-      initialKind.current = res.kind;
-      setResolution(res);
-      setViewId(res.folderId);
+      const override = state.meta.settings.rememberPerSite && t.id !== null && o ? await getOverride(session, t.id, o) : null;
+      setViewId(resolveFolder(state.folders, t.url, override).folderId);
+      setReady(true);
     })();
   }, [state]);
 
-  // Focus the search box as soon as the main view is mounted (plan §7.1).
+  // Focus the search box as soon as the main view is mounted .
   useEffect(() => {
-    if (resolution) searchRef.current?.focus();
-  }, [resolution]);
+    if (ready) searchRef.current?.focus();
+  }, [ready]);
 
   // If the folder being viewed disappears (deleted elsewhere), fall back to root.
   useEffect(() => {
     if (viewId && state && !state.folders.some((f) => f.id === viewId)) setViewId(null);
   }, [state, viewId]);
 
+  // The mapping offer belongs to the folder it was made for.
+  useEffect(() => {
+    if (suggest && viewId !== suggest.folderId) setSuggest(null);
+  }, [viewId, suggest]);
+
+  // A session-only sort choice lasts until another folder opens.
+  useEffect(() => setSessionSort(null), [viewId]);
+
   const current = viewId ? folders.find((f) => f.id === viewId) ?? null : null;
   const crumbs = current ? pathOf(folders, current.id) : [];
-  const sortMode = settings?.sortMode ?? 'manual';
+
+  const defaultSort: SortMode = settings?.sortMode ?? 'manual';
+  const sortPersist = settings?.sortPersist ?? true;
+  const sortMode: SortMode = sortPersist ? defaultSort : (sessionSort ?? defaultSort);
+  const chooseSort = (m: SortMode) => {
+    setSortOpen(false);
+    if (sortPersist) store.updateSettings({ sortMode: m });
+    else setSessionSort(m);
+    searchRef.current?.focus();
+  };
 
   const items: Item[] = useMemo(() => {
     const q = query.trim();
     if (q) {
       return searchSnippets(folders, q).map((h: SearchHit) => ({ kind: 'snippet', snippet: h.snippet, folder: h.folder, path: h.path, key: `s:${h.snippet.id}` }));
     }
-    if (!current) return rootFolders(folders).map((f) => ({ kind: 'folder', folder: f, key: `f:${f.id}` }));
-    const kids = childrenOf(folders, current.id);
-    const out: Item[] = kids.map((f) => ({ kind: 'folder', folder: f, key: `f:${f.id}` }));
-    if (current.rollUpDescendants && kids.length) {
-      for (const g of rollUp(folders, current.id)) {
-        if (!g.snippets.length) continue;
+    if (!current) return rootFolders(folders, folderSort).map((f) => ({ kind: 'folder', folder: f, key: `f:${f.id}` }));
+    const kids = childrenOf(folders, current.id, folderSort);
+    const roll = !!current.rollUpDescendants && kids.length > 0;
+    const groups = roll ? rollUp(folders, current.id, folderSort).filter((g) => g.snippets.length) : [];
+    const hasSnippets = roll ? groups.length > 0 : current.snippets.length > 0;
+    const out: Item[] = [];
+    // Headers only when both kinds are present, so folders and snippets read as two groups.
+    if (kids.length && hasSnippets) out.push({ kind: 'header', label: 'Sub-folders', key: 'h:folders' });
+    for (const f of kids) out.push({ kind: 'folder', folder: f, key: `f:${f.id}` });
+    if (roll) {
+      for (const g of groups) {
         out.push({ kind: 'header', label: g.folder.id === current.id ? current.name : g.path, key: `h:${g.folder.id}` });
         for (const s of sortSnippets(g.snippets, sortMode)) out.push({ kind: 'snippet', snippet: s, folder: g.folder, key: `s:${s.id}` });
       }
     } else {
+      if (kids.length && hasSnippets) out.push({ kind: 'header', label: 'Snippets', key: 'h:snippets' });
       for (const s of sortSnippets(current.snippets, sortMode)) out.push({ kind: 'snippet', snippet: s, folder: current, key: `s:${s.id}` });
     }
     return out;
-  }, [folders, current, query, sortMode]);
+  }, [folders, current, query, sortMode, folderSort]);
 
   const selectable = useMemo(() => items.map((it, i) => (it.kind === 'header' ? -1 : i)).filter((i) => i >= 0), [items]);
 
@@ -116,14 +146,13 @@ export function App() {
 
   // ---- navigation ------------------------------------------------------------
 
+  /** Remember the manual pick for this tab + site , when the setting allows. */
   const pin = useCallback(
     async (folderId: string | null) => {
-      if (tab?.id === null || tab?.id === undefined || !origin) return;
+      if (!remember || tab?.id === null || tab?.id === undefined || !origin) return;
       await setOverride(session, tab.id, origin, folderId ?? ROOT_OVERRIDE);
-      setResolution({ kind: 'override', folderId });
-      setChipHidden(false);
     },
-    [tab, origin],
+    [tab, origin, remember],
   );
 
   const enterFolder = useCallback(
@@ -131,16 +160,11 @@ export function App() {
       setViewId(id);
       setQuery('');
       setMenuOpen(false);
+      setSortOpen(false);
       searchRef.current?.focus();
       await pin(id);
-      // §5.5 discovery: on a host that matched nothing, offer to map after repeated picks.
-      const host = tab?.url ? parseUrl(tab.url)?.hostname : null;
-      if (initialKind.current === 'none' && host && !/^(localhost|127\.)/.test(host)) {
-        const n = await recordManualPick(session, host, id);
-        if (n >= 3 && (await shouldSuggestMapping(session, host, id))) setSuggest({ host, folderId: id });
-      }
     },
-    [pin, tab],
+    [pin],
   );
 
   const goUp = useCallback(async () => {
@@ -150,15 +174,6 @@ export function App() {
     searchRef.current?.focus();
     await pin(parentId);
   }, [current, pin]);
-
-  const resetAuto = useCallback(async () => {
-    if (tab?.id !== null && tab?.id !== undefined && origin) await clearOverride(session, tab.id, origin);
-    const res = resolveFolder(folders, tab?.url ?? null, null);
-    setResolution(res);
-    setViewId(res.folderId);
-    setChipHidden(false);
-    searchRef.current?.focus();
-  }, [tab, origin, folders]);
 
   // ---- snippets --------------------------------------------------------------
 
@@ -217,6 +232,11 @@ export function App() {
     store.upsertFolder(f);
     setPanel({ kind: 'none' });
     void enterFolder(f.id);
+    // Offer to map the new folder to this site, once, when no folder matches it yet.
+    const host = tab?.url ? parseUrl(tab.url)?.hostname : undefined;
+    if (tab?.url && host && patternForHost(tab.url) && !/^(localhost|127\.)/.test(host) && !bestMatch(folders, tab.url)) {
+      setSuggest({ host, folderId: f.id });
+    }
   };
 
   const renameFolder = (id: string, name: string) => {
@@ -240,11 +260,9 @@ export function App() {
     if (!f.urlPatterns.includes(pat)) store.upsertFolder({ ...f, urlPatterns: [...f.urlPatterns, pat] });
     setSuggest(null);
     setMenuOpen(false);
-    if (tab?.url) void markSuggested(session, parseUrl(tab.url)?.hostname ?? '');
-    // The site now auto-matches this folder; drop the manual pin so Auto reflects reality.
+    // The site now auto-matches this folder; drop the remembered pick so auto-matching reflects reality.
     if (tab?.id !== null && tab?.id !== undefined && origin) void clearOverride(session, tab.id, origin);
-    setResolution({ kind: 'match', folderId, host: parseUrl(tab?.url ?? '')?.hostname ?? '', pattern: pat });
-    showToast(`Mapped "${f.name}" to ${pat}`);
+    showToast(`"${f.name}" now opens on ${parseUrl(tab?.url ?? '')?.hostname ?? 'this site'}`);
   };
 
   // ---- keyboard --------------------------------------------------------------
@@ -273,6 +291,7 @@ export function App() {
     } else if (e.key === 'Escape') {
       e.preventDefault();
       if (menuOpen) setMenuOpen(false);
+      else if (sortOpen) setSortOpen(false);
       else if (query) setQuery('');
       else if (current) void goUp();
       else window.close();
@@ -287,7 +306,7 @@ export function App() {
 
   // ---- render ----------------------------------------------------------------
 
-  if (!state || !resolution) {
+  if (!state || !ready) {
     return (
       <div class="popup">
         <div class="empty">Loading…</div>
@@ -295,73 +314,62 @@ export function App() {
     );
   }
 
-  const chip =
-    chipHidden || query ? null : resolution.kind === 'override' ? (
-      <span class="chip">
-        Pinned for this site
-        <span>—</span>
-        <button class="btn-link" onClick={resetAuto} title="Clear the manual choice and auto-match again">
-          Auto
-        </button>
-        <button class="x" onClick={() => setChipHidden(true)} aria-label="Dismiss">
-          ×
-        </button>
-      </span>
-    ) : resolution.kind === 'match' && viewId === resolution.folderId ? (
-      <span class="chip">
-        Matched {resolution.host}
-        <button class="x" onClick={() => setChipHidden(true)} aria-label="Dismiss">
-          ×
-        </button>
-      </span>
-    ) : null;
-
   const noFolders = folders.length === 0;
 
   return (
     <div class="popup" onKeyDown={onKeyDown}>
       <div class="header">
-        <input
-          ref={searchRef}
-          class="input"
-          type="search"
-          placeholder={current ? `Search all snippets…  (Backspace to go up)` : 'Search all snippets…'}
-          value={query}
-          onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
-          aria-label="Search snippets"
-          autoComplete="off"
-          spellcheck={false}
-        />
-        <button class="btn btn-ghost icon-btn" title="Settings and folder management" onClick={() => openOptions()} aria-label="Settings">
-          ⚙
+        <div class="search-wrap">
+          <IconSearch size={15} />
+          <input
+            ref={searchRef}
+            class="input"
+            type="search"
+            placeholder={current ? 'Search…  (Backspace goes up)' : 'Search all snippets…'}
+            value={query}
+            onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
+            aria-label="Search snippets"
+            autoComplete="off"
+            spellcheck={false}
+          />
+        </div>
+        <button class="btn settings-btn" title="Settings: folders, URL patterns, import/export" onClick={() => openOptions()}>
+          <IconSettings size={17} />
+          <span>Settings</span>
         </button>
       </div>
 
       {!query ? (
         <div class="crumbs">
-          <button class={`crumb ${!current ? 'current' : ''}`} onClick={() => (current ? void (setViewId(null), pin(null)) : undefined)}>
-            {current ? '‹ All' : 'All folders'}
+          <button class={`crumb ${!current ? 'current' : 'back'}`} onClick={() => (current ? void (setViewId(null), pin(null)) : undefined)} title={current ? 'Back to all folders' : undefined}>
+            {current ? <IconChevronLeft size={14} /> : null}
+            <span>{current ? 'All' : 'All folders'}</span>
           </button>
           {crumbs.map((c, i) => (
             <span key={c.id} style={{ display: 'contents' }}>
               <span class="sep">/</span>
               <button class={`crumb ${i === crumbs.length - 1 ? 'current' : ''}`} onClick={() => i < crumbs.length - 1 && void enterFolder(c.id)}>
-                {c.name}
+                <span>{c.name}</span>
               </button>
             </span>
           ))}
           <span class="spacer" />
+          {current && state.localOnly.has(current.id) ? (
+            <span class="badge badge-warn local-badge" title="Sync storage is full; this folder is saved on this device only.">
+              Local only
+            </span>
+          ) : null}
           {current ? (
             <div class="menu">
               <button class="btn btn-ghost icon-btn" onClick={() => setMenuOpen((m) => !m)} aria-label="Folder actions" title="Folder actions">
-                ⋯
+                <IconMore size={16} />
               </button>
               {menuOpen ? (
                 <div class="menu-list" onMouseLeave={() => setMenuOpen(false)}>
                   <button onClick={() => (setMenuOpen(false), setPanel({ kind: 'newSnippet', folderId: current.id }))}>Add snippet</button>
                   {current.parentId === null ? <button onClick={() => (setMenuOpen(false), setPanel({ kind: 'newFolder', parentId: current.id }))}>Add sub-folder</button> : null}
                   <button onClick={() => (setMenuOpen(false), setPanel({ kind: 'renameFolder', folderId: current.id }))}>Rename</button>
-                  {tab?.url && patternForHost(tab.url) ? <button onClick={() => mapToSite(current.id)}>Map to {parseUrl(tab.url)?.hostname}</button> : null}
+                  {tab?.url && patternForHost(tab.url) ? <button onClick={() => mapToSite(current.id)}>Open here on {parseUrl(tab.url)?.hostname}</button> : null}
                   <button onClick={() => (setMenuOpen(false), openOptions(`#folder=${current.id}`))}>Edit URL patterns…</button>
                   <hr />
                   <button class="danger" onClick={() => (setMenuOpen(false), setPanel({ kind: 'deleteFolder', folderId: current.id }))}>
@@ -372,38 +380,21 @@ export function App() {
             </div>
           ) : (
             <button class="btn btn-sm" onClick={() => setPanel({ kind: 'newFolder', parentId: null })}>
-              + Folder
+              <IconPlus size={13} /> Folder
             </button>
           )}
         </div>
       ) : null}
 
-      {chip || (state.localOnly.size && !query) ? (
-        <div class="chip-row">
-          {chip}
-          {current && state.localOnly.has(current.id) ? (
-            <span class="badge badge-warn" title="Sync storage is full; this folder is saved on this device only.">
-              Local only, not syncing
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-
-      {suggest && !query ? (
+      {suggest && !query && viewId === suggest.folderId ? (
         <div class="notice notice-info suggest">
           <span class="txt">
-            Map <b>{folders.find((f) => f.id === suggest.folderId)?.name}</b> to <code>{suggest.host}</code>?
+            Open this folder whenever you are on <b>{suggest.host}</b>?
           </span>
           <button class="btn btn-sm btn-primary" onClick={() => mapToSite(suggest.folderId)}>
-            Map
+            Yes
           </button>
-          <button
-            class="btn btn-sm btn-ghost"
-            onClick={() => {
-              void markSuggested(session, suggest.host);
-              setSuggest(null);
-            }}
-          >
+          <button class="btn btn-sm btn-ghost" onClick={() => setSuggest(null)}>
             No
           </button>
         </div>
@@ -416,7 +407,6 @@ export function App() {
           <h3>{panel.kind === 'newSnippet' ? 'New snippet' : 'Edit snippet'}</h3>
           <SnippetEditor
             compact
-            warnOnSecrets={settings?.warnOnSecretShapedValues ?? true}
             initial={panel.kind === 'editSnippet' ? store.getFolder(panel.folderId)?.snippets.find((s) => s.id === panel.snippetId) : undefined}
             onSave={(d) => saveSnippet(panel.folderId, d, panel.kind === 'editSnippet' ? panel.snippetId : undefined)}
             onCancel={() => (setPanel({ kind: 'none' }), searchRef.current?.focus())}
@@ -445,30 +435,41 @@ export function App() {
           {current && !query ? (
             <div class="toolbar">
               <button class="btn btn-sm" onClick={() => setPanel({ kind: 'newSnippet', folderId: current.id })}>
-                + Snippet
+                <IconPlus size={13} /> Snippet
               </button>
               {childrenOf(folders, current.id).length ? (
-                <label class="hint" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <label class="hint">
                   <input
                     type="checkbox"
                     checked={!!current.rollUpDescendants}
                     onChange={(e) => store.upsertFolder({ ...current, rollUpDescendants: (e.target as HTMLInputElement).checked })}
                   />
-                  Show all in this folder
+                  Include sub-folder snippets
                 </label>
               ) : null}
               <span class="spacer" />
-              <select class="input" style={{ width: 'auto' }} value={sortMode} onChange={(e) => store.updateSettings({ sortMode: (e.target as HTMLSelectElement).value as typeof sortMode })} title="Sort order">
-                <option value="manual">Manual order</option>
-                <option value="mostUsed">Most used</option>
-                <option value="recent">Recently used</option>
-              </select>
+              <div class="menu">
+                <button class="btn btn-sm btn-ghost" onClick={() => setSortOpen((o) => !o)} aria-haspopup="menu" aria-expanded={sortOpen} title="Sort snippets">
+                  <IconSort size={14} /> Sort
+                </button>
+                {sortOpen ? (
+                  <div class="menu-list" role="menu" onMouseLeave={() => setSortOpen(false)}>
+                    {SORT_OPTIONS.map((o) => (
+                      <button key={o.id} role="menuitemradio" aria-checked={sortMode === o.id} class={sortMode === o.id ? 'checked' : ''} onClick={() => chooseSort(o.id)}>
+                        <IconCheck size={14} class={sortMode === o.id ? '' : 'blank'} />
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </div>
           ) : null}
 
           <div class="scroll list" ref={listRef} role="listbox">
             {noFolders ? (
               <div class="empty">
+                <IconFolder size={30} />
                 <strong>No folders yet</strong>
                 Create a folder, add a few commands, then map the folder to the admin sites where you use them.
                 <div style={{ marginTop: 10 }}>
@@ -478,7 +479,7 @@ export function App() {
                 </div>
               </div>
             ) : items.length === 0 ? (
-              <div class="empty">{query ? <>No snippets match “{query}”.</> : <>This folder is empty. Add a snippet with <b>+ Snippet</b>.</>}</div>
+              <div class="empty">{query ? <>No snippets match “{query}”.</> : <>This folder is empty. Add one with the <b>+ Snippet</b> button.</>}</div>
             ) : (
               items.map((it, i) => {
                 if (it.kind === 'header') return <div key={it.key} class="group-header">{it.label}</div>;
@@ -487,8 +488,10 @@ export function App() {
                 if (it.kind === 'folder') {
                   const kids = childrenOf(folders, it.folder.id).length;
                   return (
-                    <div key={it.key} data-index={i} class={`row ${isActive ? 'active' : ''}`} role="option" aria-selected={isActive} onMouseEnter={() => setActive(selIdx)} onClick={() => void enterFolder(it.folder.id)}>
-                      <span class="folder-icon">▸</span>
+                    <div key={it.key} data-index={i} class={`row folder ${isActive ? 'active' : ''}`} role="option" aria-selected={isActive} onMouseEnter={() => setActive(selIdx)} onClick={() => void enterFolder(it.folder.id)}>
+                      <span class="folder-badge">
+                        <IconFolder size={15} />
+                      </span>
                       <div class="main">
                         <div class="title">{it.folder.name}</div>
                         <div class="sub">
@@ -498,7 +501,7 @@ export function App() {
                         </div>
                       </div>
                       {state.localOnly.has(it.folder.id) ? <span class="badge badge-warn local-badge">local</span> : null}
-                      <span class="chev">›</span>
+                      <IconChevronRight size={16} class="chev" />
                     </div>
                   );
                 }
@@ -507,7 +510,7 @@ export function App() {
                   <div
                     key={it.key}
                     data-index={i}
-                    class={`row ${isActive ? 'active' : ''} ${copiedId === s.id ? 'copied-flash' : ''}`}
+                    class={`row snippet ${isActive ? 'active' : ''} ${copiedId === s.id ? 'copied-flash' : ''}`}
                     role="option"
                     aria-selected={isActive}
                     onMouseEnter={() => setActive(selIdx)}
@@ -519,17 +522,22 @@ export function App() {
                       <div class={s.label ? 'sub value' : 'value'}>{s.value.replace(/\s+/g, ' ')}</div>
                       {it.path ? <div class="sub">{it.path}</div> : null}
                     </div>
-                    {copiedId === s.id ? <span class="copied">Copied</span> : null}
+                    {copiedId === s.id ? (
+                      <span class="copied">
+                        <IconCheck size={13} /> Copied
+                      </span>
+                    ) : null}
                     <div class="actions">
                       <button
-                        class="btn btn-ghost btn-sm"
+                        class="btn btn-ghost icon-btn"
                         title="Edit"
+                        aria-label="Edit snippet"
                         onClick={(e) => {
                           e.stopPropagation();
                           setPanel({ kind: 'editSnippet', folderId: it.folder.id, snippetId: s.id });
                         }}
                       >
-                        ✎
+                        <IconPencil size={14} />
                       </button>
                     </div>
                   </div>
@@ -540,8 +548,9 @@ export function App() {
         </>
       ) : null}
 
-      <div class="footer">
-        <span class="disclosure">{PLAINTEXT_DISCLOSURE}</span>
+      <div class="footer" role="note">
+        <IconLockOpen size={13} />
+        <span class="disclosure">{FOOTER_DISCLOSURE}</span>
       </div>
     </div>
   );

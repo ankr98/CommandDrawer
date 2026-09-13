@@ -20,3 +20,11 @@ npm-debug.log*
 .env
 .env.local
 *.local
+release/
+
+# private working docs (plans, prompts, notes) — never publish
+command-snippets-extension-plan.md
+*.plan.md
+.claude/
+CLAUDE.md
+private/

@@ -1,5 +1,5 @@
 /**
- * Storage layer. Plan §3 — everything about sync quotas lives here and nowhere else.
+ * Storage layer. Everything about sync quotas lives here and nowhere else.
  *
  *  - one item per folder: `folder:<id>`; chunked as `folder:<id>:<n>` when large
  *  - meta in `meta`
@@ -274,7 +274,7 @@ export class SnippetStore {
     return this.syncKeys.size;
   }
 
-  /** Item-count guard (plan §3). */
+  /** Item-count guard. */
   canCreateFolder(): { ok: true } | { ok: false; reason: string } {
     if (this.syncKeys.size >= ITEM_COUNT_GUARD) {
       return {

@@ -1,6 +1,7 @@
 /**
  * Per-tab, per-origin folder override memory in chrome.storage.session.
- * Plan §5.3. Also holds the §5.5 discovery counters. Pure over a mockable area.
+ * Pure over a mockable area. The "map this folder?" offer is made once, right
+ * after a folder is created on a site that matches nothing.
  */
 export interface SessionArea {
   get(keys?: string | string[] | null): Promise<Record<string, unknown>>;
@@ -67,34 +68,6 @@ export async function evictIfNeeded(area: SessionArea, max = MAX_OVERRIDES): Pro
   if (excess <= 0) return 0;
   await area.remove(entries.slice(0, excess).map(([k]) => k));
   return excess;
-}
-
-// ---- §5.5 discovery: "Map this folder to <host>?" ----------------------------
-
-const PICK_PREFIX = 'pick:';
-const SUGGESTED_PREFIX = 'suggested:';
-export const SUGGEST_AFTER_PICKS = 3;
-
-/** Record a manual folder pick on a host that matched nothing. Returns the new count. */
-export async function recordManualPick(area: SessionArea, host: string, folderId: string): Promise<number> {
-  const key = `${PICK_PREFIX}${host}:${folderId}`;
-  const cur = (await area.get(key))[key];
-  const n = (typeof cur === 'number' ? cur : 0) + 1;
-  await area.set({ [key]: n });
-  return n;
-}
-
-export async function shouldSuggestMapping(area: SessionArea, host: string, folderId: string): Promise<boolean> {
-  const pickKey = `${PICK_PREFIX}${host}:${folderId}`;
-  const sugKey = `${SUGGESTED_PREFIX}${host}`;
-  const res = await area.get([pickKey, sugKey]);
-  if (res[sugKey]) return false;
-  const n = res[pickKey];
-  return typeof n === 'number' && n >= SUGGEST_AFTER_PICKS;
-}
-
-export async function markSuggested(area: SessionArea, host: string): Promise<void> {
-  await area.set({ [`${SUGGESTED_PREFIX}${host}`]: true });
 }
 
 // ---- last active URL, handed from the popup to the options-page pattern tester --

@@ -31,8 +31,36 @@ export function openSyncSettings(): void {
   void chrome.tabs.create({ url: isEdge() ? 'edge://settings/profiles/sync' : 'chrome://settings/syncSetup' });
 }
 
+/** The user's current binding for the open-drawer command, or null when none is set. */
+export async function getActionShortcut(): Promise<string | null> {
+  try {
+    const cmds = await chrome.commands.getAll();
+    return cmds.find((c) => c.name === '_execute_action')?.shortcut || null;
+  } catch {
+    return null;
+  }
+}
+
 export function openShortcutSettings(): void {
   void chrome.tabs.create({ url: isEdge() ? 'edge://extensions/shortcuts' : 'chrome://extensions/shortcuts' });
+}
+
+/** URL of a packaged asset (icons/…). Falls back to a root-relative path outside an extension context. */
+export function assetUrl(path: string): string {
+  try {
+    return chrome.runtime.getURL(path);
+  } catch {
+    return '/' + path;
+  }
+}
+
+/** Version from the manifest, or '' when unavailable. */
+export function appVersion(): string {
+  try {
+    return chrome.runtime.getManifest().version;
+  } catch {
+    return '';
+  }
 }
 
 export function formatBytes(n: number): string {
