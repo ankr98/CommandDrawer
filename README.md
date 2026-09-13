@@ -147,10 +147,10 @@ by an administrator, optional "add snippet from selection" context menu.
 
 ## Support
 
-Command Drawer is free of charge and built in spare time, so no support is provided.
-If it saves you time and you would like to see more of it, you can
-[buy me a coffee](https://buymeacoffee.com/ankr98). The same note lives on the
-About page in the extension's settings.
+Command Drawer is completely free, no strings attached, but there is no support provided.
+However, if it saves you time and you would like to see more projects like this, you can
+[buy me a coffee](https://buymeacoffee.com/ankr98). If you run into any bugs or issues, you can submit an
+issue here on GitHub, and I'll have a look when I find time to do so. I appreciate your support! 
 
 ## License
 
