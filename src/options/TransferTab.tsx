@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import type { LoadedState, SnippetStore } from '../lib/storage';
 import { exportToJson, importFromJson, type ImportMode } from '../lib/transfer';
 import { IconDownload, IconUpload } from '../shared/icons';
@@ -7,6 +7,7 @@ export function TransferTab({ store, state, notify }: { store: SnippetStore; sta
   const [mode, setMode] = useState<ImportMode>('merge');
   const [confirmReplace, setConfirmReplace] = useState(false);
   const [pending, setPending] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const doExport = () => {
     const json = exportToJson(state.folders);
@@ -74,7 +75,20 @@ export function TransferTab({ store, state, notify }: { store: SnippetStore; sta
         </div>
         <div class="setting">
           <div class="k">File</div>
-          <input type="file" accept="application/json,.json" onChange={(e) => void onFile((e.target as HTMLInputElement).files?.[0])} />
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={(e) => {
+              const input = e.target as HTMLInputElement;
+              void onFile(input.files?.[0]);
+              input.value = '';
+            }}
+          />
+          <button class="btn btn-primary" onClick={() => fileRef.current?.click()}>
+            <IconUpload size={14} /> Choose file…
+          </button>
         </div>
         {confirmReplace && pending ? (
           <div class="notice notice-danger">

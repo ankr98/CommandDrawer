@@ -59,7 +59,7 @@ export function AboutTab() {
         <h2>Third-party components</h2>
         <p class="hint">
           Icons from <a href="https://lucide.dev" target="_blank" rel="noopener noreferrer">Lucide</a> (ISC). Built with <a href="https://preactjs.com" target="_blank" rel="noopener noreferrer">Preact</a> and{' '}
-          <a href="https://zod.dev" target="_blank" rel="noopener noreferrer">Zod</a> (MIT). No fonts are bundled. Full notices in <code>THIRD-PARTY-NOTICES.txt</code> inside the extension package.
+          <a href="https://zod.dev" target="_blank" rel="noopener noreferrer">Zod</a> (MIT).
         </p>
       </div>
     </>
