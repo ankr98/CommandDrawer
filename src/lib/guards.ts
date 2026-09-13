@@ -1,5 +1,5 @@
 /**
- * Inline secret-shape detection. Plan §6.1.
+ * Inline secret-shape detection.
  *
  * Two tiers, both allowlist-only:
  *

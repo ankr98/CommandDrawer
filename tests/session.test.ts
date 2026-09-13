@@ -23,7 +23,7 @@ async function openPopup(area: MemorySession, tabId: number, url: string) {
   return resolveFolder(folders, url, ov);
 }
 
-describe('override memory — §5.3 / §5.4', () => {
+describe('override memory', () => {
   it('key shape', () => {
     expect(overrideKey(7, ORIGIN)).toBe('override:7:https://admin.site.com');
   });

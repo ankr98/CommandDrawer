@@ -71,7 +71,7 @@ export function App() {
     })();
   }, [state]);
 
-  // Focus the search box as soon as the main view is mounted (plan §7.1).
+  // Focus the search box as soon as the main view is mounted .
   useEffect(() => {
     if (ready) searchRef.current?.focus();
   }, [ready]);
@@ -146,7 +146,7 @@ export function App() {
 
   // ---- navigation ------------------------------------------------------------
 
-  /** Remember the manual pick for this tab + site (plan §5.3), when the setting allows. */
+  /** Remember the manual pick for this tab + site , when the setting allows. */
   const pin = useCallback(
     async (folderId: string | null) => {
       if (!remember || tab?.id === null || tab?.id === undefined || !origin) return;

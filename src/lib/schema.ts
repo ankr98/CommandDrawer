@@ -1,5 +1,5 @@
 /**
- * Data model, validation and constants. See plan §6 and §8.
+ * Data model, validation and constants.
  *
  * A snippet is a display name plus ONE value. There is deliberately no third
  * field. Do not add one.
@@ -49,7 +49,7 @@ export const SettingsSchema = z.object({
   theme: z.enum(['system', 'light', 'dark']).default('system'),
   // The credential nudge (guards.ts) is always on. Deliberately not a setting:
   // an off switch would invite exactly the sloppiness it exists to interrupt.
-  /** Remember a manually picked folder per site and tab (plan §5.3). false: always auto-match. */
+  /** Remember a manually picked folder per site and tab . false: always auto-match. */
   rememberPerSite: z.boolean().default(true),
   /**
    * "Command Drawer" entry in the page right-click menu.

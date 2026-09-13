@@ -8,10 +8,6 @@ one-liners, KQL fragments, tenant IDs, portal deep-links — in folders, map eac
 folder to the sites where you need it, and the popup opens on the right folder
 automatically. One click copies. Nothing else.
 
-> **Working title.** "Command Drawer" is a placeholder; see §10 of the plan for the
-> naming shortlist. The name lives in `public/manifest.json`, `package.json` and the
-> two page titles.
-
 ## What it deliberately is not
 
 - **Not a secret store.** A snippet is a label plus one value. There is no second
@@ -85,7 +81,8 @@ Load `dist/` as an unpacked extension:
 - Chrome: `chrome://extensions` → Developer mode → *Load unpacked* → pick `dist/`.
 - Edge: `edge://extensions` → Developer mode → *Load unpacked* → pick `dist/`.
 
-The same `dist/` folder, zipped, is what both stores accept.
+`npm run zip` packages `dist/` as `release/command-drawer-<version>.zip`, which is
+what both stores accept. Store listing images live in `store/`.
 
 ## Layout
 

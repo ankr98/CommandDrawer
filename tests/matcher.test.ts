@@ -119,7 +119,7 @@ describe('matches — fixture table', () => {
 describe('score — specificity tiers', () => {
   const url = 'https://admin.site.com/feature/x/y';
   const s = (p: string) => score(p, url)!;
-  it('exact host + path beats exact host + /* (the case called for in §5.1)', () => {
+  it('exact host + path beats exact host + /* (the case called for in the spec)', () => {
     expect(s('https://admin.site.com/feature/*')).toBeGreaterThan(s('https://admin.site.com/*'));
   });
   it('exact host + /* beats wildcard subdomain + path', () => {
@@ -155,7 +155,7 @@ const exo = newFolder({ id: 'exo', name: 'Exchange Online', parentId: 'ps', orde
 const graph = newFolder({ id: 'graph', name: 'Graph API', parentId: 'ps', order: 1, urlPatterns: [] });
 const folders = [root, feature, ps, exo, graph];
 
-describe('bestMatch / resolveFolder — §5.4 acceptance criteria', () => {
+describe('bestMatch / resolveFolder — acceptance criteria', () => {
   it('two folders match, /feature/* wins on /feature/x', () => {
     expect(bestMatch(folders, 'https://admin.site.com/feature/x')!.folder.id).toBe('feature');
     expect(bestMatch(folders, 'https://admin.site.com/other')!.folder.id).toBe('root');

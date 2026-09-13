@@ -1,4 +1,4 @@
-/** JSON export / import preserving hierarchy. Plan §3, §7 item 5. Pure. */
+/** JSON export / import preserving hierarchy. Pure. */
 import {
   EXPORT_FORMAT,
   ExportFileSchema,

@@ -1,8 +1,7 @@
 /**
  * Per-tab, per-origin folder override memory in chrome.storage.session.
- * Plan §5.3. Pure over a mockable area. (The §5.5 pick counters were dropped in
- * revision 4: the "map this folder?" offer is now made once, right after a folder
- * is created on a site that matches nothing.)
+ * Pure over a mockable area. The "map this folder?" offer is made once, right
+ * after a folder is created on a site that matches nothing.
  */
 export interface SessionArea {
   get(keys?: string | string[] | null): Promise<Record<string, unknown>>;

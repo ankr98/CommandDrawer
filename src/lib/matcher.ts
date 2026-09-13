@@ -1,6 +1,6 @@
 /**
  * Chrome match-pattern parsing, specificity scoring and folder resolution.
- * Pure functions only. Plan §5.1 / §5.2.
+ * Pure functions only.
  */
 import type { Folder } from './schema';
 import { depthOf } from './tree';
@@ -123,7 +123,7 @@ function literalChars(path: string): number {
 }
 
 /**
- * Specificity tiers, most specific first (plan §5.1):
+ * Specificity tiers, most specific first:
  *   1. exact host + specific path        4. subdomain wildcard + '/*'
  *   2. exact host + '/*'                 5. any host / everything else
  *   3. subdomain wildcard + specific path
@@ -203,7 +203,7 @@ export type Resolution =
   | { kind: 'none'; folderId: null };
 
 /**
- * Selection precedence on popup open (plan §5.2):
+ * Selection precedence on popup open:
  *   1. session override for this tab + origin
  *   2. best auto-match
  *   3. root view

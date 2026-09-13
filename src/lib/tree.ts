@@ -1,6 +1,6 @@
 /**
  * Folder hierarchy over a flat `Folder[]` with `parentId`. Pure functions.
- * Depth is enforced HERE (plan §4) — the options page, import and drag-and-drop
+ * Depth is enforced HERE — the options page, import and drag-and-drop
  * are three separate paths into the same invariant.
  */
 import { MAX_DEPTH, type Folder, type FolderSort, type Snippet } from './schema';

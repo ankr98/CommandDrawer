@@ -12,7 +12,6 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "zip": "node scripts/zip.mjs",
-    "shots": "node scripts/store-shots.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {

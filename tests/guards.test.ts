@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { detectSecret, SECRET_PATTERNS } from '../src/lib/guards';
 
 /**
- * FALSE-POSITIVE FIXTURE SET. Plan §6.1: this matters more than the true-positive
+ * FALSE-POSITIVE FIXTURE SET. This matters more than the true-positive
  * set. Every string here is a legitimate admin snippet and must produce NO warning.
  * Add to it whenever a real snippet trips a warning it shouldn't.
  */

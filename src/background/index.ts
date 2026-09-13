@@ -13,7 +13,7 @@ import { chromeSession, clearTab } from '../lib/session';
 import { chromeAreas, loadAll, SnippetStore } from '../lib/storage';
 import { buildMenu, MENU_CONTEXTS, resolveMenuClick, type MenuItem } from '../lib/contextMenu';
 
-// Registered at top level so the worker wakes up for it. Plan §5.3 cleanup.
+// Registered at top level so the worker wakes up for it.
 chrome.tabs.onRemoved.addListener((tabId) => {
   void clearTab(chromeSession(), tabId).catch(() => undefined);
 });
