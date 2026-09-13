@@ -61,8 +61,17 @@ def render(size):
         rows.append(row)
     return png(s, s, rows)
 
-os.makedirs('public/icons', exist_ok=True)
-for size in (16, 32, 48, 128):
-    with open(f'public/icons/icon-{size}.png', 'wb') as f:
+import sys
+if len(sys.argv) == 3:
+    # one-off: python scripts/make-icons.py 300 store/edge-logo-300.png
+    size, out = int(sys.argv[1]), sys.argv[2]
+    os.makedirs(os.path.dirname(out) or '.', exist_ok=True)
+    with open(out, 'wb') as f:
         f.write(render(size))
-    print('wrote', size)
+    print('wrote', out)
+else:
+    os.makedirs('public/icons', exist_ok=True)
+    for size in (16, 32, 48, 128):
+        with open(f'public/icons/icon-{size}.png', 'wb') as f:
+            f.write(render(size))
+        print('wrote', size)

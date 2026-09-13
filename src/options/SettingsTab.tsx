@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import type { LoadedState, SnippetStore, Usage } from '../lib/storage';
 import type { Settings } from '../lib/schema';
 import { PLAINTEXT_DISCLOSURE } from '../lib/guards';
-import { formatBytes, isEdge, openShortcutSettings, openSyncSettings } from '../shared/browser';
+import { formatBytes, getActionShortcut, isEdge, openShortcutSettings, openSyncSettings } from '../shared/browser';
 import { IconKeyboard, IconLockOpen } from '../shared/icons';
 
 export function SettingsTab({ store, state, notify }: { store: SnippetStore; state: LoadedState; notify: (m: string, k?: 'ok' | 'warn') => void }) {
@@ -11,6 +11,8 @@ export function SettingsTab({ store, state, notify }: { store: SnippetStore; sta
   const [usage, setUsage] = useState<Usage | null>(null);
   const refresh = () => void store.usage().then(setUsage);
   useEffect(refresh, [state.folders, store]);
+  const [shortcut, setShortcut] = useState<string | null>(null);
+  useEffect(() => void getActionShortcut().then(setShortcut), []);
 
   return (
     <>
@@ -94,14 +96,13 @@ export function SettingsTab({ store, state, notify }: { store: SnippetStore; sta
 
         <div class="setting">
           <div class="k">
-            Keyboard shortcut<small>Opens Command Drawer. Change it in the browser's shortcut settings.</small>
+            Keyboard shortcut<small>Opens Command Drawer. None is set by default; pick one in the browser's shortcut settings.</small>
           </div>
           <div class="inline">
             <IconKeyboard size={15} />
-            <span class="kbd">Ctrl+Shift+Y</span>
-            <span class="hint">(Cmd+Shift+Y on macOS)</span>
+            {shortcut ? <span class="kbd">{shortcut}</span> : <span class="hint">Not set</span>}
             <button class="btn" onClick={openShortcutSettings}>
-              Change…
+              {shortcut ? 'Change…' : 'Set…'}
             </button>
           </div>
         </div>
