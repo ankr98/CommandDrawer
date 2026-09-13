@@ -12,14 +12,8 @@ automatically. One click copies. Nothing else.
 
 - **Not a secret store.** A snippet is a label plus one value. There is no second
   field, no notes, no masking, no "reveal". Values are always shown in plaintext and
-  stored unencrypted. If you can't hide a value, you're far less likely to put a
-  password in it. A strict, local, non-blocking warning flags known credential
-  formats (Entra client secrets and refresh tokens, JWTs, Azure Storage/SAS/service
-  keys, Azure DevOps PATs, GitHub/AWS/Google/Slack keys, private-key blocks,
-  passwords embedded in URLs and connection strings) and literal values sitting
-  right after a password/secret/key keyword (`password=…`, `-ClientSecret …`,
-  `ConvertTo-SecureString "…" -AsPlainText`). It is a nudge, not a control, and it
-  is always on: there is deliberately no switch to disable it.
+  stored unencrypted. A strict, local, non-blocking warning flags known credential
+  formats. It is a nudge and always on: there is deliberately no switch to disable it.
 - **No backend.** No SaaS, no account, no telemetry. Sync rides on your browser
   profile sync (`chrome.storage.sync`), and JSON export/import is the backup and
   sharing story.
@@ -110,7 +104,7 @@ a popup lives there.
 ## Sync caveats
 
 - Sync data is **not encrypted by the extension**. Chrome/Edge apply their own
-  transport and account protection; nothing is added on top. The UI says so.
+  transport and account protection; nothing is added on top.
 - If you are not signed in or extension sync is off, `storage.sync` behaves like
   local storage. The extension cannot detect this; the settings page links to the
   browser's sync settings instead.
@@ -134,13 +128,8 @@ Patterns live in `src/lib/guards.ts` as data, in two tiers:
 A pattern ships only if it produces zero hits against the fixture set in
 `tests/guards.test.ts` (100+ legitimate admin strings, many of which mention
 passwords) and would read as obviously correct to the user every time it fires.
-When a pattern produces a false positive it is removed, not tuned. Add the offending
+When a pattern produces a false positive it is removed. Add the offending
 legitimate string to the fixture set.
-
-## Roadmap (v2, not started)
-
-Placeholder tokens (`{{tenantId}}`), `chrome.storage.managed` policy folders pushed
-by an administrator, optional "add snippet from selection" context menu.
 
 ## Support
 

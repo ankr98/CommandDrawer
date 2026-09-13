@@ -1,4 +1,8 @@
 /**
+ * Use this script to create a zip of the dist/ folder for release. The zip is store-ready:
+ * - all files at the archive root (no dist/ prefix)
+ * - forward slashes in paths
+ * - no source maps or OS cruft 
  * Package dist/ as a store-ready zip: contents at the archive root, forward
  * slashes, no source maps or OS cruft. Pure Node, works on Windows/macOS/Linux.
  *
