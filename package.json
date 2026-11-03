@@ -16,13 +16,13 @@
   },
   "dependencies": {
     "preact": "^10.29.8",
-    "zod": "^4.5.4"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.6",
     "@types/chrome": "^0.2.8",
     "@types/node": "^24.0.0",
-    "puppeteer": "^25.10.0",
+    "puppeteer": "^25.16.0",
     "typescript": "~5.9.3",
     "vite": "^8.2.2",
     "vitest": "^5.0.0"
